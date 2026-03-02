@@ -1,0 +1,997 @@
+/* Define Inter font using local files */
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Regular.ttf') format('truetype');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Italic.ttf') format('truetype');
+    font-weight: 400; /* Regular Italic */
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Bold.ttf') format('truetype');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-BoldItalic.ttf') format('truetype');
+    font-weight: 700; /* Bold Italic */
+    font-style: italic;
+}
+
+.ChapterContent_yv-bible-text__tqVMm {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    color: #616161;
+    line-height: 1.7em;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+    -ms-user-select: none;
+    overflow-x: hidden
+}
+
+.ChapterContent_verse-selected__Xxo_F {
+    border-bottom: 1px dotted #777a7b
+}
+
+.ChapterContent_not-avaliable-span__WrOM_ {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5px
+}
+
+.ChapterContent_label__R2PLt {
+    padding: inherit;
+    font-size: 14px;
+    background-color: transparent;
+    color: inherit;
+    display: inherit;
+    margin-inline-end: 5px;
+    color: #777a7b
+}
+
+.ChapterContent_chapter__uvbXo>.ChapterContent_label__R2PLt,
+.ChapterContent_hide__eM_vV {
+    display: none
+}
+
+.ChapterContent_imt2__XaK7g,
+.ChapterContent_imt3__2qc5i,
+.ChapterContent_imt4__owlCu {
+    font-size: 1em;
+    line-height: 2em;
+    margin: .5em 0;
+    font-weight: 700
+}
+
+.ChapterContent_is1__pcsVU,
+.ChapterContent_is__X7abe,
+.ChapterContent_ms1__s_U5R,
+.ChapterContent_ms__Z16Ky,
+.ChapterContent_s1__bNNaW,
+.ChapterContent_s__r_36F {
+    font-size: 1.5em;
+    margin: 0 0 1em
+}
+
+.ChapterContent_ms2__bXhJi,
+.ChapterContent_ms3__6snGR,
+.ChapterContent_ms4__6Q9TL,
+.ChapterContent_s2__l6Ny0,
+.ChapterContent_s3__CzYO0,
+.ChapterContent_s4__pyAbT {
+    font-size: .85em;
+    margin: 0 0 1em
+}
+
+.ChapterContent_iq1__ahB9D,
+.ChapterContent_iq__kevwW,
+.ChapterContent_q1__wjdiM,
+.ChapterContent_q__EZOnh,
+.ChapterContent_qm1__D9EEp,
+.ChapterContent_qm__RQkwQ {
+    padding-inline-start: 2.5em;
+    text-indent: -1em
+}
+
+.ChapterContent_iq2__Gl0pU,
+.ChapterContent_iq3__jcb2V,
+.ChapterContent_q2__Z9WWu,
+.ChapterContent_q3__vFjcK,
+.ChapterContent_qm2__VAiWV,
+.ChapterContent_qm3__4VpmQ {
+    padding-inline-start: 3.5em;
+    text-indent: -1em;
+    line-height: 2em
+}
+
+.ChapterContent_lit__OsDcW {
+    float: right;
+    font-style: italic
+}
+
+.ChapterContent_q1__wjdiM,
+.ChapterContent_q__EZOnh {
+    text-indent: 1em
+}
+
+.ChapterContent_q2__Z9WWu,
+.ChapterContent_q3__vFjcK {
+    text-indent: 2em
+}
+
+.ChapterContent_cl__YfqAu,
+.ChapterContent_vid31__2VSrY .ChapterContent_note__YlDW0,
+.ChapterContent_vid31__2VSrY .ChapterContent_s1__bNNaW,
+.ChapterContent_vid31__2VSrY .ChapterContent_verse__57FIw .ChapterContent_label__R2PLt {
+    display: none
+}
+
+.ChapterContent_table__QmWDc th,
+.ChapterContent_th1__6kkfB {
+    background: #444
+}
+
+.ChapterContent_table__QmWDc td,
+.ChapterContent_tc__2QI_Y,
+.ChapterContent_tcr1___XHoO,
+.ChapterContent_tcr__eEr_8 {
+    border: 1px solid #eee
+}
+
+.ChapterContent_add__9EgW2,
+.ChapterContent_cd__5Rtty,
+.ChapterContent_d__OHSpy,
+.ChapterContent_fq__DqSse,
+.ChapterContent_it__p_cmC,
+.ChapterContent_qt__R94J9,
+.ChapterContent_tl__at1as {
+    font-style: italic
+}
+
+.ChapterContent_iso6393zho__P_QMb .ChapterContent_pn__KG7If,
+.ChapterContent_pn__KG7If {
+    text-decoration: underline
+}
+
+.ChapterContent_vid455__9BOw1,
+.ChapterContent_vid483__UKlBm {
+    word-spacing: .4em
+}
+
+.ChapterContent_vid191__kIQ1v .ChapterContent_note__YlDW0.ChapterContent_x__tsTlk {
+    display: none
+}
+
+.ChapterContent_note__YlDW0 {
+    display: inherit
+}
+
+.ChapterContent_note__YlDW0 .ChapterContent_label__R2PLt {
+    display: none
+}
+
+.ChapterContent_note__YlDW0 .ChapterContent_fr__0KsID {
+    float: inherit;
+    font-weight: 700
+}
+
+.ChapterContent_note__YlDW0:before {
+    background-image: url(/_next/static/media/footnotes.435090f2.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-size: 24px;
+    content: "";
+    cursor: context-menu;
+    display: inline-block;
+    height: 24px;
+    margin: 5px;
+    opacity: .6;
+    width: 24px
+}
+
+.ChapterContent_note__YlDW0:hover:before {
+    opacity: 1
+}
+
+.ChapterContent_note__YlDW0:hover .ChapterContent_body__O3qjr {
+    display: block;
+    z-index: 1
+}
+
+.ChapterContent_shrink-headings__hW5qv h1,
+.ChapterContent_shrink-headings__hW5qv h2,
+.ChapterContent_shrink-headings__hW5qv h3,
+.ChapterContent_shrink-headings__hW5qv h4,
+.ChapterContent_shrink-headings__hW5qv h5,
+.ChapterContent_shrink-headings__hW5qv h6 {
+    font-size: 1.1rem
+}
+
+@media screen and (min-width:39.9375em) {
+    .ChapterContent_bible-nav-button__Q5vcZ {
+        bottom: 45%;
+        padding: .75rem
+    }
+
+    .ChapterContent_bible-nav-button__Q5vcZ.ChapterContent_nav-left__S7NO3 {
+        right: inherit;
+        left: 15%
+    }
+
+    .ChapterContent_bible-nav-button__Q5vcZ.ChapterContent_nav-right__HAcMd {
+        left: inherit;
+        right: 15%
+    }
+
+    div.ChapterContent_flex-no-wrap__KDHm9>nav>ul {
+        flex-wrap: nowrap
+    }
+}
+
+.ChapterContent_reader__Dt27r {
+    color: #121212
+}
+
+.ChapterContent_version-copyright__FlNOi {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #777a7b;
+    margin-top: 1.42857rem
+}
+
+.ChapterContent_bible-reader__LmLUa {
+    margin-top: 15px;
+    -ms-user-select: none
+}
+
+.ChapterContent_bible-reader__LmLUa[dir=rtl] {
+    text-align: right
+}
+
+.ChapterContent_yv-bible-text__tqVMm .ChapterContent_note__YlDW0:hover:before {
+    opacity: 1
+}
+
+.ChapterContent_yv-bible-text__tqVMm .ChapterContent_note__YlDW0 .ChapterContent_body__O3qjr {
+    background-color: #edefef;
+    border: 1px solid #d0d2d2;
+    border-radius: 5px;
+    color: #121212;
+    display: none;
+    font-size: 14px;
+    line-height: 21px;
+    max-width: 460px;
+    padding: 15px;
+    pointer-events: none;
+    position: absolute;
+    text-indent: 0;
+    width: calc(100vw - 2.5rem)
+}
+
+.ChapterContent_yv-bible-text__tqVMm .ChapterContent_note__YlDW0:hover .ChapterContent_body__O3qjr {
+    display: block;
+    z-index: 1
+}
+
+.ChapterContent_note__YlDW0.ChapterContent_show__nMZRJ .ChapterContent_body__O3qjr {
+    transform: scale(1);
+    opacity: 1
+}
+
+.ChapterContent_verse__57FIw {
+    cursor: pointer;
+    transition: background-color .75s cubic-bezier(.42, 1, .16, .93), color .75s
+}
+
+.ChapterContent_bible-reader__LmLUa.ChapterContent_not-selectable__HqHfy .ChapterContent_verse__57FIw .ChapterContent_content__RrUqA {
+    cursor: default !important
+}
+
+.ChapterContent_imt1__VZURv+.ChapterContent_is1__pcsVU,
+.ChapterContent_imt1__VZURv+.ChapterContent_is__X7abe,
+.ChapterContent_imt__Oq3Xy+.ChapterContent_is1__pcsVU,
+.ChapterContent_imt__Oq3Xy+.ChapterContent_is__X7abe,
+.ChapterContent_io1__JI_cH+.ChapterContent_is1__pcsVU,
+.ChapterContent_io1__JI_cH+.ChapterContent_is__X7abe,
+.ChapterContent_io2__amqvP+.ChapterContent_is1__pcsVU,
+.ChapterContent_io2__amqvP+.ChapterContent_is__X7abe,
+.ChapterContent_io3__nAqXF+.ChapterContent_is1__pcsVU,
+.ChapterContent_io3__nAqXF+.ChapterContent_is__X7abe,
+.ChapterContent_io__ZWpAy+.ChapterContent_is1__pcsVU,
+.ChapterContent_io__ZWpAy+.ChapterContent_is__X7abe,
+.ChapterContent_ip___kdde+.ChapterContent_io1__JI_cH,
+.ChapterContent_ip___kdde+.ChapterContent_io2__amqvP,
+.ChapterContent_ip___kdde+.ChapterContent_io3__nAqXF,
+.ChapterContent_ip___kdde+.ChapterContent_io__ZWpAy,
+.ChapterContent_ip___kdde+.ChapterContent_is1__pcsVU,
+.ChapterContent_li1__cyEJ6+.ChapterContent_li2__mmVCU,
+.ChapterContent_li1__cyEJ6+.ChapterContent_s1__bNNaW,
+.ChapterContent_li1__cyEJ6+.ChapterContent_s2__l6Ny0,
+.ChapterContent_li1__cyEJ6+.ChapterContent_s__r_36F,
+.ChapterContent_li2__mmVCU+.ChapterContent_li1__cyEJ6,
+.ChapterContent_li2__mmVCU+.ChapterContent_li__POoL8,
+.ChapterContent_li2__mmVCU+.ChapterContent_s1__bNNaW,
+.ChapterContent_li2__mmVCU+.ChapterContent_s2__l6Ny0,
+.ChapterContent_li2__mmVCU+.ChapterContent_s__r_36F,
+.ChapterContent_li__POoL8+.ChapterContent_li2__mmVCU,
+.ChapterContent_li__POoL8+.ChapterContent_s1__bNNaW,
+.ChapterContent_li__POoL8+.ChapterContent_s2__l6Ny0,
+.ChapterContent_li__POoL8+.ChapterContent_s__r_36F,
+.ChapterContent_m__3AINJ+.ChapterContent_ms1__s_U5R,
+.ChapterContent_m__3AINJ+.ChapterContent_ms2__bXhJi,
+.ChapterContent_m__3AINJ+.ChapterContent_ms__Z16Ky,
+.ChapterContent_m__3AINJ+.ChapterContent_p__dVKHb,
+.ChapterContent_m__3AINJ+.ChapterContent_q1__wjdiM,
+.ChapterContent_m__3AINJ+.ChapterContent_q__EZOnh,
+.ChapterContent_m__3AINJ+.ChapterContent_s1__bNNaW,
+.ChapterContent_m__3AINJ+.ChapterContent_s2__l6Ny0,
+.ChapterContent_m__3AINJ+.ChapterContent_s__r_36F,
+.ChapterContent_mr__Vxus8+.ChapterContent_s1__bNNaW,
+.ChapterContent_ms1__s_U5R+.ChapterContent_ms1__s_U5R,
+.ChapterContent_ms1__s_U5R+.ChapterContent_s1__bNNaW,
+.ChapterContent_ms1__s_U5R+.ChapterContent_s__r_36F,
+.ChapterContent_ms2__bXhJi+.ChapterContent_s1__bNNaW,
+.ChapterContent_ms2__bXhJi+.ChapterContent_s__r_36F,
+.ChapterContent_p__dVKHb+.ChapterContent_li1__cyEJ6,
+.ChapterContent_p__dVKHb+.ChapterContent_li__POoL8,
+.ChapterContent_p__dVKHb+.ChapterContent_ms1__s_U5R,
+.ChapterContent_p__dVKHb+.ChapterContent_ms2__bXhJi,
+.ChapterContent_p__dVKHb+.ChapterContent_ms__Z16Ky,
+.ChapterContent_p__dVKHb+.ChapterContent_q1__wjdiM,
+.ChapterContent_p__dVKHb+.ChapterContent_q__EZOnh,
+.ChapterContent_p__dVKHb+.ChapterContent_s1__bNNaW,
+.ChapterContent_p__dVKHb+.ChapterContent_s2__l6Ny0,
+.ChapterContent_p__dVKHb+.ChapterContent_s__r_36F,
+.ChapterContent_pi1__0PlGt+.ChapterContent_s1__bNNaW,
+.ChapterContent_pi1__0PlGt+.ChapterContent_s__r_36F,
+.ChapterContent_pi__sfdC0+.ChapterContent_s1__bNNaW,
+.ChapterContent_pi__sfdC0+.ChapterContent_s__r_36F,
+.ChapterContent_q1__wjdiM+.ChapterContent_m__3AINJ,
+.ChapterContent_q1__wjdiM+.ChapterContent_ms1__s_U5R,
+.ChapterContent_q1__wjdiM+.ChapterContent_ms2__bXhJi,
+.ChapterContent_q1__wjdiM+.ChapterContent_ms__Z16Ky,
+.ChapterContent_q1__wjdiM+.ChapterContent_p__dVKHb,
+.ChapterContent_q1__wjdiM+.ChapterContent_s1__bNNaW,
+.ChapterContent_q1__wjdiM+.ChapterContent_s2__l6Ny0,
+.ChapterContent_q1__wjdiM+.ChapterContent_s__r_36F,
+.ChapterContent_q1__wjdiM+p,
+.ChapterContent_q2__Z9WWu+.ChapterContent_m__3AINJ,
+.ChapterContent_q2__Z9WWu+.ChapterContent_ms1__s_U5R,
+.ChapterContent_q2__Z9WWu+.ChapterContent_ms2__bXhJi,
+.ChapterContent_q2__Z9WWu+.ChapterContent_ms__Z16Ky,
+.ChapterContent_q2__Z9WWu+.ChapterContent_p__dVKHb,
+.ChapterContent_q2__Z9WWu+.ChapterContent_s1__bNNaW,
+.ChapterContent_q2__Z9WWu+.ChapterContent_s2__l6Ny0,
+.ChapterContent_q2__Z9WWu+.ChapterContent_s__r_36F,
+.ChapterContent_q3__vFjcK+.ChapterContent_m__3AINJ,
+.ChapterContent_q3__vFjcK+.ChapterContent_ms1__s_U5R,
+.ChapterContent_q3__vFjcK+.ChapterContent_ms2__bXhJi,
+.ChapterContent_q3__vFjcK+.ChapterContent_ms__Z16Ky,
+.ChapterContent_q3__vFjcK+.ChapterContent_s1__bNNaW,
+.ChapterContent_q3__vFjcK+.ChapterContent_s2__l6Ny0,
+.ChapterContent_q3__vFjcK+.ChapterContent_s__r_36F,
+.ChapterContent_q__EZOnh+.ChapterContent_ms1__s_U5R,
+.ChapterContent_q__EZOnh+.ChapterContent_ms2__bXhJi,
+.ChapterContent_q__EZOnh+.ChapterContent_ms__Z16Ky,
+.ChapterContent_q__EZOnh+.ChapterContent_p__dVKHb,
+.ChapterContent_q__EZOnh+.ChapterContent_s1__bNNaW,
+.ChapterContent_q__EZOnh+.ChapterContent_s2__l6Ny0,
+.ChapterContent_q__EZOnh+.ChapterContent_s__r_36F {
+    margin-top: 1em
+}
+
+.ChapterContent_d__OHSpy+.ChapterContent_d__OHSpy {
+    margin-top: -1.25em
+}
+
+.ChapterContent_chapter__uvbXo div:first-child {
+    margin-top: 0
+}
+
+.ChapterContent_ip___kdde,
+.ChapterContent_p__dVKHb {
+    margin-bottom: 0;
+    text-indent: 1em
+}
+
+.ChapterContent_imt1__VZURv,
+.ChapterContent_imt__Oq3Xy,
+.ChapterContent_ms1__s_U5R,
+.ChapterContent_ms__Z16Ky,
+.ChapterContent_mt1__DgnXO,
+.ChapterContent_mt__w_tNy {
+    font-size: 1.3em;
+    line-height: 2em;
+    margin: 1em 0 0;
+    font-weight: 700
+}
+
+.ChapterContent_ms__Z16Ky+.ChapterContent_mr__Vxus8 {
+    margin-top: -.5em
+}
+
+.ChapterContent_imt1__VZURv,
+.ChapterContent_imt__Oq3Xy,
+.ChapterContent_iot__Ajdo4 {
+    font-size: 1.3em;
+    line-height: 2em;
+    margin: .5em 0;
+    font-weight: 700
+}
+
+.ChapterContent_io1__JI_cH,
+.ChapterContent_io__ZWpAy {
+    list-style-type: disc;
+    margin-inline-start: 1em;
+    display: list-item
+}
+
+.ChapterContent_io2__amqvP,
+.ChapterContent_io3__nAqXF {
+    list-style-type: disc;
+    margin-inline-start: 2em;
+    display: list-item
+}
+
+.ChapterContent_ipi__9GLVy {
+    text-indent: 1em
+}
+
+.ChapterContent_imt2__XaK7g,
+.ChapterContent_imt3__2qc5i,
+.ChapterContent_imt4__owlCu,
+.ChapterContent_mt2__vZWYn,
+.ChapterContent_mt3__xMb95,
+.ChapterContent_mt4__1rEKN {
+    font-size: 1em;
+    line-height: 2em;
+    margin: .5em 0;
+    font-weight: 700
+}
+
+.ChapterContent_is1__pcsVU,
+.ChapterContent_is__X7abe,
+.ChapterContent_ms1__s_U5R,
+.ChapterContent_ms__Z16Ky,
+.ChapterContent_s1__bNNaW,
+.ChapterContent_s__r_36F {
+    font-size: 1.1em;
+    font-weight: 700;
+    line-height: 2em;
+    margin: 0 0 .5em
+}
+
+.ChapterContent_heading__xBDcs {
+    font-size: 1.03em;
+    font-weight: 700;
+    line-height: 1.2em;
+    margin: 0;
+    -webkit-font-smoothing: subpixel-antialiased
+}
+
+.ChapterContent_ms2__bXhJi,
+.ChapterContent_ms3__6snGR,
+.ChapterContent_ms4__6Q9TL,
+.ChapterContent_s2__l6Ny0,
+.ChapterContent_s3__CzYO0,
+.ChapterContent_s4__pyAbT {
+    font-weight: 700;
+    line-height: 2em;
+    margin: 1em 0 .5em
+}
+
+.ChapterContent_cls__tu68m,
+.ChapterContent_iex__Pox5W,
+.ChapterContent_im__QHY3O,
+.ChapterContent_ip___kdde,
+.ChapterContent_m__3AINJ,
+.ChapterContent_nb__WvM5I,
+.ChapterContent_p__dVKHb {
+    font-size: 1em;
+    line-height: 2em;
+    margin: 0
+}
+
+.ChapterContent_book__VkdB2 .ChapterContent_p__dVKHb {
+    margin-inline-start: 5px
+}
+
+.ChapterContent_imi__Th_H2,
+.ChapterContent_ipi__9GLVy,
+.ChapterContent_mi__Se_a8,
+.ChapterContent_pi1__0PlGt,
+.ChapterContent_pi__sfdC0,
+.ChapterContent_pm__cwYtL,
+.ChapterContent_pmc__Qs2Ye {
+    margin: 0 1em;
+    line-height: 2em
+}
+
+.ChapterContent_imi__Th_H2 {
+    margin-inline-start: 1em;
+    text-indent: 0
+}
+
+.ChapterContent_cls__tu68m,
+.ChapterContent_ipr__PhmtK,
+.ChapterContent_pr__sHfrU,
+.ChapterContent_qr__sFLwC {
+    text-align: right
+}
+
+.ChapterContent_iq1__ahB9D,
+.ChapterContent_iq__kevwW,
+.ChapterContent_q1__wjdiM,
+.ChapterContent_q__EZOnh,
+.ChapterContent_qm1__D9EEp,
+.ChapterContent_qm__RQkwQ {
+    padding-inline-start: 2em;
+    text-indent: -2em;
+    line-height: 2em
+}
+
+.ChapterContent_iqt__Qxv88 {
+    margin-inline-start: 1em
+}
+
+.ChapterContent_iq2__Gl0pU,
+.ChapterContent_iq3__jcb2V,
+.ChapterContent_iq4__Dwgxp,
+.ChapterContent_q2__Z9WWu,
+.ChapterContent_q3__vFjcK,
+.ChapterContent_q4__xn0JV,
+.ChapterContent_qm2__VAiWV,
+.ChapterContent_qm3__4VpmQ,
+.ChapterContent_qm4__DZSUc {
+    padding-inline-start: 2em;
+    text-indent: -1em;
+    line-height: 2em
+}
+
+.ChapterContent_b__BLNfi,
+.ChapterContent_lb__tvDLT {
+    line-height: 2em;
+    height: 1em
+}
+
+.ChapterContent_ili1__ngWzb,
+.ChapterContent_ili__r2n8b,
+.ChapterContent_io1__JI_cH,
+.ChapterContent_li1__cyEJ6 {
+    margin-inline-start: 2em;
+    padding-inline-start: 0;
+    line-height: 2em
+}
+
+.ChapterContent_ili2__7LuZ8,
+.ChapterContent_io2__amqvP,
+.ChapterContent_li2__mmVCU {
+    margin-inline-start: 4em;
+    padding-inline-start: 0;
+    line-height: 2em
+}
+
+.ChapterContent_d__OHSpy,
+.ChapterContent_iot__Ajdo4,
+.ChapterContent_qa__RzTnv {
+    font-size: 1em;
+    line-height: 2em
+}
+
+.ChapterContent_bk__btwIt,
+.ChapterContent_ior__6jcPO,
+.ChapterContent_iqt__Qxv88,
+.ChapterContent_r___3KRx,
+.ChapterContent_sls__bze04,
+.ChapterContent_sp__y6CR3,
+.ChapterContent_tl__at1as {
+    font-style: italic
+}
+
+.ChapterContent_mr__Vxus8 {
+    font-style: italic;
+    font-weight: 700
+}
+
+.ChapterContent_r___3KRx,
+.ChapterContent_r___3KRx .ChapterContent_heading__xBDcs,
+.ChapterContent_rq__2RM2J,
+.ChapterContent_sr__1YDDW,
+.ChapterContent_sr__1YDDW .ChapterContent_heading__xBDcs {
+    font-style: italic;
+    font-size: .8em
+}
+
+.ChapterContent_pmr__xvQHy {
+    text-align: right;
+    margin-inline-end: .3em
+}
+
+.ChapterContent_pc__SFTa7,
+.ChapterContent_qc__OIsDr {
+    text-align: center
+}
+
+.ChapterContent_ph1__mVwVE,
+.ChapterContent_ph__huxOO {
+    text-indent: -2em;
+    padding-inline-start: 2em
+}
+
+.ChapterContent_ph2__ynD_X {
+    text-indent: -2em;
+    padding-inline-start: 4em
+}
+
+.ChapterContent_lit__OsDcW,
+.ChapterContent_qs__m69ba {
+    text-align: right;
+    font-style: italic;
+    display: block
+}
+
+.ChapterContent_fp___RiJg {
+    margin-top: 1em;
+    display: inline-block;
+    text-indent: 1em
+}
+
+span.ChapterContent_fk__ZzZlQ {
+    font-weight: 700;
+    font-style: italic
+}
+
+span.ChapterContent_fqa__Xa2yn {
+    font-style: italic
+}
+
+.ChapterContent_table__QmWDc {
+    border-bottom: 1em
+}
+
+.ChapterContent_table__QmWDc th,
+.ChapterContent_th1__6kkfB {
+    background: #121212;
+    color: #fff;
+    font-weight: 700;
+    padding: 5px
+}
+
+.ChapterContent_thr1__Ib3Ua,
+.ChapterContent_thr__OTW6T {
+    text-align: right;
+    font-weight: 700;
+    padding: 5px
+}
+
+.ChapterContent_table__QmWDc td,
+.ChapterContent_tc__2QI_Y {
+    border: 1px solid #ccc;
+    padding: 5px
+}
+
+.ChapterContent_tcr1___XHoO,
+.ChapterContent_tcr__eEr_8 {
+    border: 1px solid #ccc;
+    padding: 5px;
+    text-align: right
+}
+
+.ChapterContent_add__9EgW2,
+.ChapterContent_dc__ae7v0,
+.ChapterContent_k__tDRQ1,
+.ChapterContent_qt__R94J9,
+.ChapterContent_sig__IHsnZ {
+    padding: 0;
+    margin: 0;
+    font-size: 1em;
+    line-height: 2em;
+    text-indent: 0;
+    font-weight: 400;
+    font-style: normal;
+    text-transform: none;
+    text-decoration: none
+}
+
+.ChapterContent_nd__ECPAf {
+    font-variant: small-caps
+}
+
+.ChapterContent_ord__DzSwb {
+    font-size: .75em;
+    line-height: 2em;
+    position: relative;
+    vertical-align: baseline;
+    top: -.5em
+}
+
+.ChapterContent_reader__Dt27r h1 {
+    color: #121212;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin: 3rem 0;
+    text-align: center;
+    text-transform: uppercase;
+    line-height: 1.2em
+}
+
+.ChapterContent_wj___uP1U .ChapterContent_content__RrUqA,
+.ChapterContent_wordsofchrist__v7fcf {
+    color: #ff3d4d
+}
+
+.ChapterContent_pn__KG7If {
+    text-decoration: underline
+}
+
+.ChapterContent_bd__FCGnY,
+.ChapterContent_em__tGZti {
+    font-weight: 700
+}
+
+.ChapterContent_add__9EgW2,
+.ChapterContent_cd__5Rtty,
+.ChapterContent_fq__DqSse,
+.ChapterContent_it__p_cmC,
+.ChapterContent_qt__R94J9,
+.ChapterContent_tl__at1as {
+    font-style: italic
+}
+
+.ChapterContent_bdit___RrVH {
+    font-weight: 700;
+    font-style: italic
+}
+
+.ChapterContent_d__OHSpy {
+    font-style: italic;
+    margin-bottom: 1em
+}
+
+.ChapterContent_no__Bf9_H {
+    font-weight: 400;
+    font-style: normal
+}
+
+.ChapterContent_nd__ECPAf,
+.ChapterContent_sc__Hg9da {
+    font-variant: small-caps
+}
+
+.ChapterContent_cl__YfqAu {
+    display: none
+}
+
+.ChapterContent_vp__pDsuZ {
+    font-size: rem-calc(12);
+    color: #777a8b
+}
+
+.ChapterContent_vid111__imsra .ChapterContent_content__RrUqA:after,
+.ChapterContent_vid58__apEty .ChapterContent_content__RrUqA:after,
+.ChapterContent_vid8__OzOLX .ChapterContent_content__RrUqA:after {
+    content: " "
+}
+
+.ChapterContent_vid111__imsra .ChapterContent_nd__ECPAf .ChapterContent_content__RrUqA:after,
+.ChapterContent_vid58__apEty .ChapterContent_nd__ECPAf .ChapterContent_content__RrUqA:after,
+.ChapterContent_vid8__OzOLX .ChapterContent_nd__ECPAf .ChapterContent_content__RrUqA:after {
+    content: ""
+}
+
+.ChapterContent_iso6393zho__P_QMb .ChapterContent_pn__KG7If {
+    text-decoration: underline
+}
+
+.ChapterContent_vid31__2VSrY .ChapterContent_s1__bNNaW,
+.ChapterContent_vid31__2VSrY .ChapterContent_verse__57FIw .ChapterContent_label__R2PLt {
+    display: none
+}
+
+.ChapterContent_vid31__2VSrY .ChapterContent_s1__bNNaW+.ChapterContent_p__dVKHb {
+    text-indent: 0;
+    margin-top: 1.5em
+}
+
+.ChapterContent_vid31__2VSrY .ChapterContent_q2__Z9WWu+.ChapterContent_q1__wjdiM {
+    margin-top: .25em
+}
+
+.ChapterContent_vid31__2VSrY .ChapterContent_note__YlDW0 {
+    display: none
+}
+
+.ChapterContent_vid31__2VSrY .ChapterContent_wj___uP1U .ChapterContent_content__RrUqA {
+    color: inherit
+}
+
+.ChapterContent_vid111__imsra .ChapterContent_bkPSA__fPGJm .ChapterContent_it__p_cmC {
+    display: block;
+    margin-bottom: 1em
+}
+
+.ChapterContent_vid111__imsra .ChapterContent_bkPSA__fPGJm .ChapterContent_note__YlDW0 .ChapterContent_it__p_cmC {
+    display: inline;
+    margin-bottom: 0
+}
+
+.ChapterContent_vid111__imsra .ChapterContent_imt1__VZURv,
+.ChapterContent_vid111__imsra .ChapterContent_imt__Oq3Xy {
+    display: none
+}
+
+.ChapterContent_vid110__TYtWe .ChapterContent_pc__SFTa7,
+.ChapterContent_vid110__TYtWe .ChapterContent_qc__OIsDr,
+.ChapterContent_vid111__imsra .ChapterContent_pc__SFTa7,
+.ChapterContent_vid111__imsra .ChapterContent_qc__OIsDr,
+.ChapterContent_vid113__f_9T3 .ChapterContent_pc__SFTa7,
+.ChapterContent_vid113__f_9T3 .ChapterContent_qc__OIsDr {
+    font-variant: small-caps
+}
+
+.ChapterContent_vid463__fkScu div.ChapterContent_s2__l6Ny0 {
+    text-align: center
+}
+
+.ChapterContent_vid1113__aoVP1,
+.ChapterContent_vid1947__ITi4P,
+.ChapterContent_vid2065__Dwuxe,
+.ChapterContent_vid2083__TusBb,
+.ChapterContent_vid2327__x_Idy,
+.ChapterContent_vid2496__oKO6B,
+.ChapterContent_vid455__9BOw1,
+.ChapterContent_vid483__UKlBm {
+    word-spacing: .4em
+}
+
+.ChapterContent_vid1443__0Mqe1 .ChapterContent_k__tDRQ1 {
+    font-weight: 700
+}
+
+.ChapterContent_vid1558__zoNBr .ChapterContent_sls__bze04 {
+    font-style: normal
+}
+
+.ChapterContent_vid191__kIQ1v .ChapterContent_note__YlDW0.ChapterContent_x__tsTlk,
+.ChapterContent_vid2376__cMAr_ .ChapterContent_note__YlDW0.ChapterContent_x__tsTlk {
+    display: none
+}
+
+.ChapterContent_vid1849__8a4gz .ChapterContent_imt__Oq3Xy,
+.ChapterContent_vid1849__8a4gz .ChapterContent_is__X7abe,
+.ChapterContent_vid1849__8a4gz .ChapterContent_mt1__DgnXO,
+.ChapterContent_vid1849__8a4gz .ChapterContent_mt2__vZWYn {
+    text-align: center
+}
+
+.ChapterContent_vid1849__8a4gz .ChapterContent_q1__wjdiM {
+    text-indent: -1em
+}
+
+.ChapterContent_vid1849__8a4gz .ChapterContent_q2__Z9WWu,
+.ChapterContent_vid1849__8a4gz .ChapterContent_q3__vFjcK {
+    text-indent: 0
+}
+
+.ChapterContent_vid2270__Eir36 .ChapterContent_p__dVKHb {
+    text-indent: -1.5em;
+    margin-inline-start: 1.5em
+}
+
+.ChapterContent_vid2311___RlBV .ChapterContent_add__9EgW2 {
+    font-style: normal
+}
+
+.ChapterContent_vid2196__QSmfq .ChapterContent_q1__wjdiM {
+    text-indent: -1.5em;
+    margin-inline-start: 1.5em
+}
+
+.ChapterContent_vid1111__rzYEi .ChapterContent_add__9EgW2 {
+    font-size: .85em
+}
+
+.ChapterContent_vid2051__AZxA_ .ChapterContent_ms1__s_U5R .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2051__AZxA_ .ChapterContent_ms__Z16Ky .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_ms1__s_U5R .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_ms__Z16Ky .ChapterContent_heading__xBDcs {
+    font-size: 1.3em;
+    font-weight: 700
+}
+
+.ChapterContent_vid2051__AZxA_ .ChapterContent_ms2__bXhJi .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_ms2__bXhJi .ChapterContent_heading__xBDcs {
+    font-size: 1.3em;
+    font-style: italic;
+    font-weight: 400
+}
+
+.ChapterContent_vid2051__AZxA_ .ChapterContent_s1__bNNaW .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2051__AZxA_ .ChapterContent_s__r_36F .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_s1__bNNaW .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_s__r_36F .ChapterContent_heading__xBDcs {
+    font-size: 1em;
+    font-weight: 700
+}
+
+.ChapterContent_vid2051__AZxA_ .ChapterContent_s2__l6Ny0 .ChapterContent_heading__xBDcs,
+.ChapterContent_vid2319___ZV4o .ChapterContent_s2__l6Ny0 .ChapterContent_heading__xBDcs {
+    font-size: 1em;
+    font-style: italic;
+    font-weight: 400
+}
+
+.ChapterContent_vid2319___ZV4o .ChapterContent_qa__RzTnv,
+vid2051 .ChapterContent_qa__RzTnv {
+    display: none
+}
+
+.ChapterContent_vid1714__l7ftt .ChapterContent_ms1__s_U5R,
+.ChapterContent_vid1714__l7ftt .ChapterContent_ms2__bXhJi,
+.ChapterContent_vid1714__l7ftt .ChapterContent_ms3__6snGR,
+.ChapterContent_vid1714__l7ftt .ChapterContent_ms__Z16Ky,
+.ChapterContent_vid1714__l7ftt .ChapterContent_mt1__DgnXO,
+.ChapterContent_vid1714__l7ftt .ChapterContent_mt2__vZWYn,
+.ChapterContent_vid1714__l7ftt .ChapterContent_mt3__xMb95,
+.ChapterContent_vid1714__l7ftt .ChapterContent_mt__w_tNy,
+.ChapterContent_vid1714__l7ftt .ChapterContent_s__r_36F,
+.ChapterContent_vid2766__JOC_e .ChapterContent_r___3KRx,
+.ChapterContent_vid2766__JOC_e .ChapterContent_s__r_36F,
+.ChapterContent_vid2767__sTR44 .ChapterContent_r___3KRx,
+.ChapterContent_vid2767__sTR44 .ChapterContent_s__r_36F,
+.ChapterContent_vid2768__vYjgY .ChapterContent_r___3KRx,
+.ChapterContent_vid2768__vYjgY .ChapterContent_s__r_36F,
+.ChapterContent_vid2769__7BYYO .ChapterContent_r___3KRx,
+.ChapterContent_vid2769__7BYYO .ChapterContent_s__r_36F,
+.ChapterContent_vid2778__goUcr .ChapterContent_r___3KRx,
+.ChapterContent_vid2778__goUcr .ChapterContent_s__r_36F {
+    text-align: center
+}
+
+.ChapterContent_iso6393arb__zhJQ4 .ChapterContent_d__OHSpy,
+.ChapterContent_iso6393arb__zhJQ4 .ChapterContent_p__dVKHb {
+    font-size: 1.2em
+}
+
+.ChapterContent_verse__57FIw .ChapterContent_label__R2PLt {
+    vertical-align: baseline;
+    position: relative;
+    top: -.6em
+}
+
+.ChapterContent_version-copyright__FlNOi a {
+    color: #3d79c2;
+    text-decoration: underline
+}
+
+.ChapterContent_table__QmWDc {
+    background: #fff;
+    border: 1px solid #ddd;
+    margin-bottom: 1.42857rem;
+    table-layout: auto;
+    font-size: medium;
+    line-height: normal;
+    border-collapse: separate
+}
+
+.ChapterContent_row__LWwQj:after,
+.ChapterContent_row__LWwQj:before {
+    content: " ";
+    display: table
+}
+
+.ChapterContent_row__LWwQj:nth-child(odd) {
+    background-color: #f8f8f8
+}

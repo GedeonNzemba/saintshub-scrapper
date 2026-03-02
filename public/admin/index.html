@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>📱 API Dashboard</h1>
+                <p class="server-status">
+                    <span class="status-dot" id="serverStatus"></span>
+                    <span id="serverStatusText">Checking...</span>
+                </p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-section="overview">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-item" data-section="resources">
+                    <span class="icon">📦</span> Resources
+                </button>
+                <button class="nav-item" data-section="bible">
+                    <span class="icon">📖</span> Bible API
+                </button>
+                <button class="nav-item" data-section="sermons">
+                    <span class="icon">🎤</span> Sermons
+                </button>
+                <button class="nav-item" data-section="annotations">
+                    <span class="icon">✏️</span> Annotations
+                </button>
+                <button class="nav-item" data-section="daily-content">
+                    <span class="icon">☀️</span> Daily Content
+                </button>
+                <button class="nav-item" data-section="api-tester">
+                    <span class="icon">🧪</span> API Tester
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>Server: <code>localhost:5000</code></p>
+                <p class="version">v4.0</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active">
+                <h2>Dashboard Overview</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-details">
+                            <h3 id="resourceCount">Loading...</h3>
+                            <p>Total Resources</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✏️</div>
+                        <div class="stat-details">
+                            <h3 id="highlightCount">Loading...</h3>
+                            <p>Highlights</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-details">
+                            <h3 id="noteCount">Loading...</h3>
+                            <p>Notes</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🌐</div>
+                        <div class="stat-details">
+                            <h3 id="languageCount">Loading...</h3>
+                            <p>Bible Languages</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-endpoints-overview">
+                    <h3>Available API Endpoints</h3>
+                    <div class="endpoint-categories">
+                        <div class="endpoint-category">
+                            <h4>📦 Resources (MongoDB)</h4>
+                            <ul>
+                                <li><span class="method get">GET</span> /api/v4/resources</li>
+                                <li><span class="method post">POST</span> /api/v4/resources</li>
+                                <li><span class="method get">GET</span> /api/v4/resources/:id</li>
+                                <li><span class="method put">PUT</span> /api/v4/resources/:id</li>
+                                <li><span class="method delete">DELETE</span> /api/v4/resources/:id</li>
+                            </ul>
+                        </div>
+                        <div class="endpoint-category">
+                            <h4>📖 Bible API</h4>
+                            <ul>
+                                <li><span class="method get">GET</span> /api/v4/bible/languages</li>
+                                <li><span class="method get">GET</span> /api/v4/bible/versions</li>
+                                <li><span class="method get">GET</span> /api/v4/bible/books</li>
+                                <li><span class="method get">GET</span> /api/v4/bible/chapter</li>
+                            </ul>
+                        </div>
+                        <div class="endpoint-category">
+                            <h4>🎤 Sermons</h4>
+                            <ul>
+                                <li><span class="method get">GET</span> /api/v3/languages</li>
+                                <li><span class="method get">GET</span> /api/v3/sermons/year/:year</li>
+                                <li><span class="method get">GET</span> /api/v3/search</li>
+                                <li><span class="method get">GET</span> /api/v3/sermon/download</li>
+                            </ul>
+                        </div>
+                        <div class="endpoint-category">
+                            <h4>✏️ Annotations</h4>
+                            <ul>
+                                <li><span class="method post">POST</span> /api/v4/annotations/highlights</li>
+                                <li><span class="method get">GET</span> /api/v4/annotations/highlights</li>
+                                <li><span class="method post">POST</span> /api/v4/annotations/notes</li>
+                                <li><span class="method get">GET</span> /api/v4/annotations/notes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Resources Section -->
+            <section id="resources" class="content-section">
+                <div class="section-header">
+                    <h2>Resource Management</h2>
+                    <button class="btn btn-primary" onclick="showCreateResourceModal()">
+                        ➕ Create New Resource
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-bar">
+                    <select id="resourceTypeFilter" class="filter-input">
+                        <option value="">All Types</option>
+                        <option value="Jesus">Jesus</option>
+                        <option value="Billy_Graham">Billy Graham</option>
+                        <option value="Gordon_Lindsay">Gordon Lindsay</option>
+                        <option value="Oral_Roberts">Oral Roberts</option>
+                        <option value="William_Branham">William Branham</option>
+                        <option value="Banner">Banner</option>
+                    </select>
+                    
+                    <input type="text" id="resourceSearchInput" class="filter-input" placeholder="Search resources...">
+                    
+                    <select id="resourceSortBy" class="filter-input">
+                        <option value="createdAt">Sort by: Created Date</option>
+                        <option value="updatedAt">Sort by: Updated Date</option>
+                        <option value="resourceName">Sort by: Name</option>
+                    </select>
+                    
+                    <select id="resourceSortOrder" class="filter-input">
+                        <option value="desc">Descending</option>
+                        <option value="asc">Ascending</option>
+                    </select>
+                    
+                    <button class="btn btn-secondary" onclick="loadResources()">🔍 Apply Filters</button>
+                </div>
+
+                <!-- Resources List -->
+                <div class="resources-container" id="resourcesList">
+                    <div class="loading">Loading resources...</div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="resourcesPagination"></div>
+            </section>
+
+            <!-- Bible API Section -->
+            <section id="bible" class="content-section">
+                <h2>Bible API Explorer</h2>
+                
+                <div class="bible-explorer">
+                    <div class="bible-step">
+                        <h3>1. Select Language</h3>
+                        <div class="input-group">
+                            <input type="text" id="bibleLanguageSearch" placeholder="Search languages...">
+                            <button class="btn btn-primary" onclick="loadBibleLanguages()">Load Languages</button>
+                        </div>
+                        <select id="bibleLanguageSelect" class="full-width" size="5">
+                            <option value="">-- Select a language --</option>
+                        </select>
+                    </div>
+
+                    <div class="bible-step">
+                        <h3>2. Select Version</h3>
+                        <button class="btn btn-primary" onclick="loadBibleVersions()" id="loadVersionsBtn" disabled>Load Versions</button>
+                        <select id="bibleVersionSelect" class="full-width" size="5">
+                            <option value="">-- Select a version --</option>
+                        </select>
+                    </div>
+
+                    <div class="bible-step">
+                        <h3>3. Select Book</h3>
+                        <button class="btn btn-primary" onclick="loadBibleBooks()" id="loadBooksBtn" disabled>Load Books</button>
+                        <select id="bibleBookSelect" class="full-width" size="5">
+                            <option value="">-- Select a book --</option>
+                        </select>
+                    </div>
+
+                    <div class="bible-step">
+                        <h3>4. Load Chapter</h3>
+                        <div class="input-group">
+                            <input type="number" id="bibleChapterNumber" placeholder="Chapter" min="1">
+                            <button class="btn btn-primary" onclick="loadBibleChapter()" id="loadChapterBtn" disabled>Load Chapter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bible-content" id="bibleContentDisplay">
+                    <p class="placeholder-text">Select language, version, book, and chapter to view content</p>
+                </div>
+            </section>
+
+            <!-- Sermons Section -->
+            <section id="sermons" class="content-section">
+                <h2>Sermon Management</h2>
+                
+                <div class="sermon-tools">
+                    <div class="tool-card">
+                        <h3>🔍 Search Sermons</h3>
+                        <input type="text" id="sermonSearchQuery" placeholder="Enter search query...">
+                        <button class="btn btn-primary" onclick="searchSermons()">Search</button>
+                        <div id="sermonSearchResults" class="results-area"></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3>📅 Browse by Year</h3>
+                        <input type="number" id="sermonYearInput" placeholder="Enter year (e.g., 2024)" min="1900" max="2100">
+                        <button class="btn btn-primary" onclick="getSermonsByYear()">Get Sermons</button>
+                        <div id="sermonYearResults" class="results-area"></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3>⏱️ Filter by Length</h3>
+                        <select id="sermonLengthSelect">
+                            <option value="short">Short</option>
+                            <option value="medium">Medium</option>
+                            <option value="long">Long</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="getSermonsByLength()">Filter</button>
+                        <div id="sermonLengthResults" class="results-area"></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3>📚 Browse by Series</h3>
+                        <select id="sermonSeriesSelect">
+                            <option value="series1">Series 1</option>
+                            <option value="series2">Series 2</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="getSermonsBySeries()">Get Series</button>
+                        <div id="sermonSeriesResults" class="results-area"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Annotations Section -->
+            <section id="annotations" class="content-section">
+                <h2>Annotations Management</h2>
+                
+                <div class="annotation-tabs">
+                    <button class="tab-btn active" onclick="switchAnnotationTab('highlights')">✨ Highlights</button>
+                    <button class="tab-btn" onclick="switchAnnotationTab('notes')">📝 Notes</button>
+                </div>
+
+                <!-- Highlights Tab -->
+                <div id="highlightsTab" class="annotation-tab-content active">
+                    <div class="section-header">
+                        <h3>Bible Highlights</h3>
+                        <button class="btn btn-primary" onclick="showCreateHighlightModal()">➕ Create Highlight</button>
+                    </div>
+                    
+                    <div class="filters-bar">
+                        <input type="text" id="highlightUserFilter" placeholder="Filter by userId...">
+                        <input type="text" id="highlightBookFilter" placeholder="Filter by book...">
+                        <button class="btn btn-secondary" onclick="loadHighlights()">🔍 Filter</button>
+                    </div>
+
+                    <div id="highlightsList" class="annotations-list">
+                        <div class="loading">Loading highlights...</div>
+                    </div>
+                </div>
+
+                <!-- Notes Tab -->
+                <div id="notesTab" class="annotation-tab-content">
+                    <div class="section-header">
+                        <h3>Bible Notes</h3>
+                        <button class="btn btn-primary" onclick="showCreateNoteModal()">➕ Create Note</button>
+                    </div>
+                    
+                    <div class="filters-bar">
+                        <input type="text" id="noteUserFilter" placeholder="Filter by userId...">
+                        <input type="text" id="noteBookFilter" placeholder="Filter by book...">
+                        <button class="btn btn-secondary" onclick="loadNotes()">🔍 Filter</button>
+                    </div>
+
+                    <div id="notesList" class="annotations-list">
+                        <div class="loading">Loading notes...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Daily Content Section -->
+            <section id="daily-content" class="content-section">
+                <h2>Daily Content</h2>
+                
+                <div class="daily-content-grid">
+                    <div class="content-card">
+                        <h3>📖 Verse of the Day</h3>
+                        <select id="verseLanguageSelect">
+                            <option value="">Default Language</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadVerseOfTheDay()">Load Verse</button>
+                        <div id="verseOfTheDayDisplay" class="content-display"></div>
+                    </div>
+
+                    <div class="content-card">
+                        <h3>☀️ Daily Quote & Verse</h3>
+                        <select id="dailyContentLanguageSelect">
+                            <option value="">Default Language</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadDailyContent()">Load Content</button>
+                        <div id="dailyContentDisplay" class="content-display"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Tester Section -->
+            <section id="api-tester" class="content-section">
+                <h2>API Endpoint Tester</h2>
+                
+                <div class="api-tester-container">
+                    <div class="tester-form">
+                        <div class="form-group">
+                            <label>HTTP Method</label>
+                            <select id="testMethod" class="full-width">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Endpoint URL</label>
+                            <input type="text" id="testEndpoint" class="full-width" placeholder="/api/v4/resources">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Request Body (JSON)</label>
+                            <textarea id="testRequestBody" rows="8" class="full-width" placeholder='{"key": "value"}'></textarea>
+                        </div>
+
+                        <button class="btn btn-primary btn-large" onclick="testApiEndpoint()">🚀 Send Request</button>
+                    </div>
+
+                    <div class="tester-response">
+                        <h3>Response</h3>
+                        <div class="response-status" id="responseStatus"></div>
+                        <pre id="responseBody" class="response-body">No request sent yet</pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="createResourceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Resource</h2>
+                <button class="modal-close" onclick="closeModal('createResourceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createResourceForm">
+                    <div class="form-group">
+                        <label>Resource Type *</label>
+                        <select id="newResourceType" required onchange="updateResourceForm()">
+                            <option value="">-- Select Type --</option>
+                            <option value="Jesus">Jesus</option>
+                            <option value="Billy_Graham">Billy Graham</option>
+                            <option value="Gordon_Lindsay">Gordon Lindsay</option>
+                            <option value="Oral_Roberts">Oral Roberts</option>
+                            <option value="William_Branham">William Branham</option>
+                            <option value="Banner">Banner</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Resource Name *</label>
+                        <input type="text" id="newResourceName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="newResourceCategory">
+                    </div>
+
+                    <div id="typeSpecificFields"></div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createResourceModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Resource</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="createHighlightModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Highlight</h2>
+                <button class="modal-close" onclick="closeModal('createHighlightModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createHighlightForm">
+                    <div class="form-group">
+                        <label>User ID *</label>
+                        <input type="text" id="newHighlightUserId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Version ID *</label>
+                        <input type="text" id="newHighlightVersionId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Book (USFM) *</label>
+                        <input type="text" id="newHighlightBook" required placeholder="e.g., GEN">
+                    </div>
+                    <div class="form-group">
+                        <label>Chapter *</label>
+                        <input type="number" id="newHighlightChapter" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Verses *</label>
+                        <input type="text" id="newHighlightVerses" required placeholder="e.g., 1-5">
+                    </div>
+                    <div class="form-group">
+                        <label>Color *</label>
+                        <select id="newHighlightColor" required>
+                            <option value="yellow">Yellow</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="pink">Pink</option>
+                            <option value="orange">Orange</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createHighlightModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="createNoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Note</h2>
+                <button class="modal-close" onclick="closeModal('createNoteModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createNoteForm">
+                    <div class="form-group">
+                        <label>User ID *</label>
+                        <input type="text" id="newNoteUserId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Version ID *</label>
+                        <input type="text" id="newNoteVersionId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Book (USFM) *</label>
+                        <input type="text" id="newNoteBook" required placeholder="e.g., GEN">
+                    </div>
+                    <div class="form-group">
+                        <label>Chapter *</label>
+                        <input type="number" id="newNoteChapter" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Verses *</label>
+                        <input type="text" id="newNoteVerses" required placeholder="e.g., 1-5">
+                    </div>
+                    <div class="form-group">
+                        <label>Note Text *</label>
+                        <textarea id="newNoteText" required rows="4"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('createNoteModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

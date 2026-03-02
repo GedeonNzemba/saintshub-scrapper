@@ -1,0 +1,217 @@
+/* Base Styles & Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Define Inter font using local files */
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Regular.ttf') format('truetype');
+    font-weight: 400; /* Regular */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Italic.ttf') format('truetype');
+    font-weight: 400; /* Regular Italic */
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-Bold.ttf') format('truetype');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('/static_fonts/Inter/static/Inter_18pt-BoldItalic.ttf') format('truetype');
+    font-weight: 700; /* Bold Italic */
+    font-style: italic;
+}
+
+html, body {
+    height: 100%;
+    width: 100vw;
+    font-family: 'Inter', sans-serif;
+    background-color: #f4f7f6; /* Light grayish background */
+    color: #333; /* Darker text for readability */
+    line-height: 1.6;
+    overflow-x: hidden;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif; /* Ensure Inter is applied */
+}
+
+/* Header Styling */
+header {
+    background-color: #ffffff; /* White header */
+    padding: 1.5rem 2rem; /* Increased padding slightly */
+    border-bottom: 1px solid #e0e0e0; /* Subtle border */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2.5rem; /* Increased margin */
+}
+
+.chapter-versions, .language-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto; /* Center the content */
+}
+
+.chapter-versions {
+    align-items: center; /* Keep center alignment for this row */
+    gap: 1.5rem; /* Space between select sections */
+    margin-bottom: 1.5rem; /* Increased margin-bottom */
+}
+
+.language-container {
+    align-items: baseline; /* Align text baseline with select baseline */
+    padding-top: 1rem;
+}
+
+header section {
+    display: flex;
+    flex-direction: column; /* Stack label and select */
+}
+
+header label {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0.25rem;
+}
+
+select, button, input, textarea {
+    font-family: 'Inter', sans-serif; /* Apply Inter to form elements */
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+select:hover {
+    border-color: #999;
+}
+
+select:focus {
+    border-color: #007bff; /* Highlight color on focus */
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.current-language-wrapper {
+    display: flex;
+    align-items: baseline; /* Align h2 and span text */
+    gap: 0.5rem; /* Space between 'Current Language:' and the language name */
+}
+
+.current-language-wrapper h2 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.current-language {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #007bff; /* Highlight current language */
+    margin-left: 0.5rem;
+}
+
+header hr {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 1.5rem 0; /* More space around the HR */
+}
+
+/* Main Content Area */
+main {
+    max-width: 100%; /* Readable width for text */
+    margin: 0 auto 3rem auto; /* Increased bottom margin */
+    padding: 0 1.5rem; /* Increased horizontal padding */
+}
+
+/* Chapter Display Area */
+#chapter-content-display {
+    background-color: #ffffff;
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+#chapter-content-display h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #2c3e50; /* Dark blue-gray for headings */
+    margin-bottom: 1.5rem;
+    text-align: center;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.75rem;
+}
+
+/* Styles for the Bible text itself - these might need adjustments based on the actual HTML structure from the API */
+.ChapterContent_yv-bible-text__tqVMm .content-wrapper p {
+    margin-bottom: 0.8em;
+    font-size: 1.05rem;
+}
+
+.ChapterContent_yv-bible-text__tqVMm .verse {
+    font-weight: bold;
+    margin-right: 0.3em;
+    color: #555;
+}
+
+.ChapterContent_yv-bible-text__tqVMm .chapter-number {
+    font-size: 1.5em;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5em;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    header {
+        padding: 1rem;
+    }
+
+    .chapter-versions,
+    .language-container {
+        flex-direction: column;
+        align-items: stretch; /* Full width for selects on small screens */
+        gap: 1rem;
+    }
+
+    select {
+        width: 100%;
+        min-width: unset;
+        margin-bottom: 1rem; /* Add margin when selects stack */
+    }
+
+    .current-language-wrapper {
+        width: 100%; /* Allow wrapper to take full width for alignment */
+        justify-content: center; /* Center the text content if it wraps or is alone */
+        margin-bottom: 0.5rem;
+    }
+
+    #chapter-content-display {
+        padding: 1rem;
+    }
+
+    #chapter-content-display h2 {
+        font-size: 1.5rem;
+    }
+}

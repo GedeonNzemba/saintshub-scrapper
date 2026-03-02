@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sermon Stream Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        audio { width: 100%; max-width: 600px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Sermon Stream Test</h1>
+    <p>Testing audio stream from:</p>
+    <code>http://localhost:5000/api/v3/streamSermon?audioUrl=https://d21kl6o5a7faj0.cloudfront.net/repo/78a/78a6f8f6964518ca87f96ca81df0f34260ba6b26671633e94a3ae9f4697d6f487c17586b79b4371d85f120f77df686b9564dbb2490088e05fd6e47fe44fdeb67.m4a</code>
+
+    <audio controls preload="metadata">
+        <source src="http://localhost:5000/api/v3/streamSermon?audioUrl=https://d21kl6o5a7faj0.cloudfront.net/repo/78a/78a6f8f6964518ca87f96ca81df0f34260ba6b26671633e94a3ae9f4697d6f487c17586b79b4371d85f120f77df686b9564dbb2490088e05fd6e47fe44fdeb67.m4a" type="audio/mp4">
+        Your browser does not support the audio element.
+    </audio>
+
+</body>
+</html>

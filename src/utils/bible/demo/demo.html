@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Content Viewer</title>
+
+    <!-- Google Fonts Inter with proper format -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+    <!-- Original Bible.com CSS -->
+    <link rel="stylesheet" href="css1.css">
+    <link rel="stylesheet" href="css2.css">
+    <link rel="preload" href="css3.css" as="style">
+    <link rel="stylesheet" href="css4.css" data-n-g>
+    <link rel="preload" href="css5.css" as="style">
+    <link rel="stylesheet" href="css6.css" data-n-g>
+    <style>
+        /* Add this CSS to ensure Inter font applies */
+        .content-wrapper {
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        .ChapterContent_reader__Dt27r {
+    color: #121212;
+}
+
+        /* Force Inter font on Bible content elements */
+        .ChapterContent_book__VkdB2,
+        .ChapterContent_chapter__uvbXo,
+        .ChapterContent_label__R2PLt,
+        .ChapterContent_heading__xBDcs,
+        .ChapterContent_p__dVKHb,
+        .ChapterContent_verse__57FIw {
+            font-family: inherit !important;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        #jsonInput {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            font-family: monospace;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .content-wrapper {
+            margin-top: 2rem;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="input-section">
+            <h2>Paste API Response JSON Here</h2>
+            <textarea id="jsonInput" placeholder="Paste the full JSON response here..."></textarea>
+            <button onclick="processJson()">Render Bible Content</button>
+            <div id="errorMessage" class="error"></div>
+        </div>
+        <div id="content-container" class="content-wrapper ChapterContent_reader__Dt27r"></div>
+    </div>
+
+    <script>
+        // Class name mapping from API response to original classes
+        const classMap = {
+            'version': 'version vid1 iso6393eng',
+            'book': 'ChapterContent_book__VkdB2 bkGEN',
+            'chapter': 'ChapterContent_chapter__uvbXo',
+            'label': 'ChapterContent_label__R2PLt',
+            's1': 'ChapterContent_s1__bNNaW',
+            'heading': 'ChapterContent_heading__xBDcs',
+            'p': 'ChapterContent_p__dVKHb',
+            'verse': 'ChapterContent_verse__57FIw',
+            'content': 'ChapterContent_content__RrUqA',
+            'nd': 'ChapterContent_nd__ECPAf',
+            'add': 'ChapterContent_add__9EgW2'
+        };
+
+        function processJson() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const contentContainer = document.getElementById('content-container');
+
+            // Reset previous content and errors
+            contentContainer.innerHTML = '';
+            errorMessage.textContent = '';
+
+            try {
+                // Parse JSON input
+                const responseData = JSON.parse(jsonInput);
+
+                // Extract content HTML
+                const contentHtml = responseData.pageProps.chapterInfo.content;
+
+                // Transform class names
+                const transformedHtml = contentHtml.replace(/class="([^"]*)"/g, (match, p1) => {
+                    const classes = p1.split(' ')
+                        .map(originalClass => classMap[originalClass] || originalClass)
+                        .join(' ');
+                    return `class="${classes}"`;
+                });
+
+                // Create wrapper with font settings
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                font-family: 'Inter', sans-serif !important;
+                font-size: 18px;
+                font-synthesis: none; /* Disable synthetic bold/italic */
+            `;
+
+                // Create inner container for Bible content
+                const bibleContent = document.createElement('div');
+                bibleContent.innerHTML = transformedHtml;
+
+                wrapper.appendChild(bibleContent);
+                contentContainer.appendChild(wrapper);
+
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+                console.error('Processing error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>

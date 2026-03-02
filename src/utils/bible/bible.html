@@ -1,0 +1,566 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Content Viewer</title>
+    <!-- Original Bible.com CSS -->
+    <link rel="stylesheet" href="css1.css">
+    <link rel="stylesheet" href="css2.css">
+    <link rel="preload" href="css3.css" as="style">
+    <link rel="stylesheet" href="css4.css" data-n-g>
+    <link rel="preload" href="css5.css" as="style">
+    <link rel="stylesheet" href="css6.css" data-n-g>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="e4df58e265133e28.css">
+    <!-- Remove Google Fonts link for Inter -->
+    <!--
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+        rel="stylesheet">
+    -->
+</head>
+
+<body>
+    <header>
+        <div class="chapter-versions">
+            <!-- CHAPTERS -->
+            <section>
+                <input type="search" id="books-search" placeholder="Search books/chapters..." style="margin-bottom: 5px; width: calc(100% - 10px); padding: 5px;">
+                <select name="chapters" id="chapters">
+                    <option value="Genesis">Genesis</option>
+                    <option value="Exodus">Exodus</option>
+                    <option value="Leviticus">Leviticus</option>
+                </select>
+            </section>
+
+            <!-- VERSIONS -->
+            <section style="width: 100%;">
+                <input type="search" id="versions-search" placeholder="Search versions..." style="margin-bottom: 5px; width: calc(100% - 10px); padding: 5px;">
+                <select name="versions" id="versions">
+                    <option value="Amplified Bible">Amplified Bible</option>
+                    <option value="Amplified Bible, Classic Edition">Amplified Bible, Classic Edition</option>
+                    <option value="American Standard Version">American Standard Version</option>
+                </select>
+            </section>
+        </div>
+
+        <!--   LANGUAGES     -->
+        <div class="language-container">
+            <div class="current-language-wrapper">
+                <h2>Current Language: </h2>
+                <span class="current-language">English</span>
+            </div>
+
+            <section>
+                <input type="search" id="languages-search" placeholder="Search languages..." style="margin-bottom: 5px; width: calc(100% - 10px); padding: 5px;">
+                <select name="languages" id="languages">
+                    <option value="English">English</option>
+                    <option value="Français">Français</option>
+                </select>
+            </section>
+        </div>
+
+        <hr />
+    </header>
+
+    <!-- Data here   -->
+
+    <main>
+        <div class="max-w-full w-full">
+            <div class="mli-auto max-w-[512px] pli-2 w-full sm:w-full md:w-5/6 lg:w-1/2 mbe-12">
+                <div class="ChapterContent_yv-bible-text__tqVMm">
+                    <div class="ChapterContent_bible-reader__LmLUa" dir="ltr">
+                        <div id="chapter-content-display" class="content-wrapper ChapterContent_reader__Dt27r"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api/v4/bible'; // Assuming your server runs on port 5000
+
+        const languagesSelect = document.getElementById('languages');
+        const versionsSelect = document.getElementById('versions');
+        const chaptersSelect = document.getElementById('chapters'); // This will be for books initially, then chapters
+        const chapterContentDisplay = document.getElementById('chapter-content-display'); // Declare and initialize globally
+        const currentLanguageSpan = document.querySelector('.current-language');
+
+        // Search input fields
+        const languagesSearchInput = document.getElementById('languages-search');
+        const versionsSearchInput = document.getElementById('versions-search');
+        const booksSearchInput = document.getElementById('books-search');
+
+        let selectedVersionId = null; // Variable to store the currently selected version ID
+
+        // Default values
+        const DEFAULT_LANGUAGE_CODE = 'eng'; // Updated from 'en' to 'eng'
+        const DEFAULT_VERSION_ID = '1';      // King James Version
+        const DEFAULT_CHAPTER_USFM = 'GEN.1';  // Genesis 1
+
+        async function fetchLanguages() {
+            const searchQuery = languagesSearchInput.value;
+            const url = searchQuery ? `${API_BASE_URL}/languages?search=${encodeURIComponent(searchQuery)}` : `${API_BASE_URL}/languages`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const languagesData = await response.json(); // Assuming the API returns { languages: [...] }
+                const languages = languagesData.languages || languagesData; // Adjust based on actual API response structure
+
+                languagesSelect.innerHTML = '<option value="">Select Language</option>'; // Clear existing options
+                if (Array.isArray(languages)) {
+                    languages.forEach(lang => {
+                        const option = document.createElement('option');
+                        option.value = lang.code;
+                        option.textContent = lang.name;
+                        languagesSelect.appendChild(option);
+                    });
+                } else {
+                    console.error('Languages data is not an array:', languagesData);
+                    chapterContentDisplay.innerHTML = '<p>Error: Unexpected language data format.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching languages:', error);
+                chapterContentDisplay.innerHTML = '<p>Error loading languages.</p>';
+            }
+        }
+
+        async function fetchVersions(languageCode) {
+            if (!languageCode) {
+                versionsSelect.innerHTML = '<option value="">Select a language first</option>';
+                booksSearchInput.value = ''; // Clear books search
+                chaptersSelect.innerHTML = '<option value="">Select a version first</option>'; // Clear books/chapters dropdown
+                return;
+            }
+            versionsSelect.innerHTML = '<option>Loading versions...</option>'; // Loading state
+            booksSearchInput.value = ''; // Clear books search
+            chaptersSelect.innerHTML = '<option>Select a version first</option>'; // Clear books/chapters dropdown
+
+            const searchQuery = versionsSearchInput.value;
+            let url = `${API_BASE_URL}/versions?lang=${languageCode}`;
+            if (searchQuery) {
+                url += `&search=${encodeURIComponent(searchQuery)}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const versionsData = await response.json(); // Assuming API returns { versions: [...] }
+                const versions = versionsData.versions || versionsData; // Adjust based on actual API response
+
+                versionsSelect.innerHTML = ''; // Clear previous options
+                if (versions.length === 0) {
+                    versionsSelect.innerHTML = '<option>No versions found</option>';
+                } else {
+                    versions.forEach(version => {
+                        const option = document.createElement('option');
+                        option.value = version.id; // Assuming 'id' is the property for version ID
+                        option.textContent = version.name; // Assuming 'name' is the property for version name
+                        versionsSelect.appendChild(option);
+                    });
+                }
+                // After loading versions, automatically fetch books for the first version in the list (if any)
+                // Or use the default version if it's for the default language
+                if (versions.length > 0) {
+                    let versionToLoadBooksFor = versions[0].id;
+                    if (languageCode === DEFAULT_LANGUAGE_CODE && Array.from(versionsSelect.options).some(opt => opt.value === DEFAULT_VERSION_ID)){
+                        versionsSelect.value = DEFAULT_VERSION_ID;
+                        versionToLoadBooksFor = DEFAULT_VERSION_ID;
+                    } else {
+                         versionsSelect.value = versions[0].id; // Select the first version by default
+                    }
+                    fetchBooks(versionToLoadBooksFor);
+                } else {
+                    selectedVersionId = null; // No versions, so no selected version ID
+                    fetchBooks(null); // This will clear the books dropdown
+                }
+            } catch (error) {
+                console.error('Error fetching versions:', error);
+                versionsSelect.innerHTML = '<option>Error loading versions</option>';
+            }
+        }
+
+        async function fetchBooks(versionId) {
+            selectedVersionId = versionId; // Update the global selectedVersionId
+            if (!versionId) {
+                chaptersSelect.innerHTML = '<option>Select a version first</option>';
+                return;
+            }
+            chaptersSelect.innerHTML = '<option>Loading books...</option>'; // Loading state
+
+            const searchQuery = booksSearchInput.value;
+            let url = `${API_BASE_URL}/books?versionId=${versionId}`;
+            if (searchQuery) {
+                url += `&search=${encodeURIComponent(searchQuery)}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const booksData = await response.json(); // Assuming API returns { books: [...] }
+                const books = booksData.books || booksData; // Adjust based on actual API response
+
+                chaptersSelect.innerHTML = ''; // Clear before populating
+                if (books.length === 0) {
+                    chaptersSelect.innerHTML = '<option>No books found</option>';
+                } else {
+                    books.forEach(book => {
+                        if (book.chapters && Array.isArray(book.chapters)) {
+                            book.chapters.forEach(chapter => {
+                                const option = document.createElement('option');
+                                // Ensure chapter.usfm and book.name (or similar) and chapter.human_title (or similar) exist
+                                option.value = chapter.usfm;
+                                option.textContent = `${book.name} - ${chapter.human_title || chapter.usfm.split('.')[1]}`;
+                                chaptersSelect.appendChild(option);
+                            });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching books:', error);
+                chaptersSelect.innerHTML = '<option>Error loading books</option>';
+            }
+        }
+
+        async function fetchChapterContent(chapterUsfm) {
+            if (!chapterContentDisplay) {
+                console.error('chapter-content-display element not found');
+                return;
+            }
+            if (!selectedVersionId) {
+                console.warn('No version selected. Using default or last selected if available for books.');
+                // Attempt to use default if nothing else is set
+                // This scenario should ideally be handled by ensuring version is always selected before chapter
+                if (!versionsSelect.value && DEFAULT_VERSION_ID) {
+                     selectedVersionId = DEFAULT_VERSION_ID;
+                } else {
+                    selectedVersionId = versionsSelect.value; 
+                }
+                if (!selectedVersionId) {
+                    chapterContentDisplay.innerHTML = '<p>Please select a Bible version first.</p>';
+                    return;
+                }
+            }
+
+            chapterContentDisplay.innerHTML = '<p>Loading chapter...</p>'; // Show loading state
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chapter?versionId=${selectedVersionId}&chapterUsfm=${chapterUsfm}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const content = await response.json();
+
+                // Clear previous content
+                chapterContentDisplay.innerHTML = ''; // Clear existing content
+
+                // Add chapter heading if it exists
+                if (content.heading) {
+                    const headingElement = document.createElement('h1'); 
+                    headingElement.textContent = content.heading;
+                    // Optional: Add some basic styling or a class for styling via CSS
+                    // headingElement.style.textAlign = 'center'; 
+                    // headingElement.style.marginBottom = '1rem';
+                    chapterContentDisplay.appendChild(headingElement);
+                }
+
+                // Create the wrapping div with inline styles
+                const styledWrapperDiv = document.createElement('div');
+                styledWrapperDiv.style.fontFamily = 'Inter';
+                styledWrapperDiv.style.fontSize = '18px';
+
+                // Append the Bible verse HTML content to the styled wrapper
+                // Create a temporary div to parse and append the HTML string safely
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content.html;
+                while (tempDiv.firstChild) {
+                    styledWrapperDiv.appendChild(tempDiv.firstChild);
+                }
+
+                // Append the styled wrapper to the main display area
+                chapterContentDisplay.appendChild(styledWrapperDiv);
+
+                // Create a container for Prev/Next buttons
+                const navButtonContainer = document.createElement('div');
+                navButtonContainer.style.marginTop = '20px'; // Add some space above the buttons
+                navButtonContainer.style.display = 'flex'; // Arrange buttons side-by-side
+                navButtonContainer.style.justifyContent = 'space-between'; // Space them out
+
+                // If there's a previous chapter, create and append the "Previous Chapter" button
+                if (content.previousChapterUsfm && content.previousChapterUsfm.usfm) {
+                    const prevButton = document.createElement('button');
+                    prevButton.textContent = `← Previous (${content.previousChapterUsfm.name || content.previousChapterUsfm.usfm})`;
+                    prevButton.onclick = () => {
+                        // Find and select the chapter in the dropdown
+                        const prevOption = Array.from(chaptersSelect.options).find(opt => opt.value === content.previousChapterUsfm.usfm);
+                        if (prevOption) chaptersSelect.value = content.previousChapterUsfm.usfm;
+                        fetchChapterContent(content.previousChapterUsfm.usfm);
+                    };
+                    prevButton.style.padding = '10px 15px';
+                    prevButton.style.cursor = 'pointer';
+                    prevButton.classList.add('prev-chapter-button'); 
+                    navButtonContainer.appendChild(prevButton);
+                } else {
+                    // Add a placeholder div to maintain spacing if only next button exists
+                    const placeholder = document.createElement('div');
+                    navButtonContainer.appendChild(placeholder);
+                }
+
+                // If there's a next chapter, create and append the "Next Chapter" button
+                if (content.nextChapterUsfm && content.nextChapterUsfm.usfm) {
+                    const nextButton = document.createElement('button');
+                    nextButton.textContent = `Next (${content.nextChapterUsfm.name || content.nextChapterUsfm.usfm}) →`;
+                    nextButton.onclick = () => {
+                        // Find and select the chapter in the dropdown
+                        const nextOption = Array.from(chaptersSelect.options).find(opt => opt.value === content.nextChapterUsfm.usfm);
+                        if (nextOption) chaptersSelect.value = content.nextChapterUsfm.usfm;
+                        fetchChapterContent(content.nextChapterUsfm.usfm);
+                    };
+                    nextButton.style.padding = '10px 15px';
+                    nextButton.style.cursor = 'pointer';
+                    nextButton.classList.add('next-chapter-button'); 
+                    navButtonContainer.appendChild(nextButton);
+                }
+                
+                chapterContentDisplay.appendChild(navButtonContainer); // Append the button container
+
+            } catch (error) {
+                console.error('Error fetching chapter content:', error);
+                chapterContentDisplay.innerHTML = `<p>Error loading chapter ${chapterUsfm}.</p>`;
+            }
+        }
+
+        // Function to get verse elements from a selection
+        function getVersesFromSelection(selection, contentArea) {
+            if (!selection || !selection.rangeCount || selection.isCollapsed) {
+                // console.log('getVersesFromSelection: Invalid selection object.'); // Optional: uncomment for very verbose C.Ling
+                return [];
+            }
+            const range = selection.getRangeAt(0);
+            const verseSpansSet = new Set(); // Use a Set to avoid duplicates
+
+            console.log('[DEBUG] getVersesFromSelection: contentArea:', contentArea);
+            console.log('[DEBUG] getVersesFromSelection: selection range:', range);
+            console.log('[DEBUG] getVersesFromSelection: range.startContainer:', range.startContainer, 'Type:', range.startContainer.nodeType);
+            console.log('[DEBUG] getVersesFromSelection: range.endContainer:', range.endContainer, 'Type:', range.endContainer.nodeType);
+
+            // 1. Check nodes directly intersected by the range
+            const newSelector = 'span.ChapterContent_verse__57FIw[data-usfm]'; // CORRECTED SELECTOR
+            const allPotentialVerseMarkers = Array.from(contentArea.querySelectorAll(newSelector));
+            console.log(`[DEBUG] getVersesFromSelection: Found ${allPotentialVerseMarkers.length} potential verse markers using '${newSelector}'.`);
+            if (allPotentialVerseMarkers.length > 0) {
+                console.log('[DEBUG] getVersesFromSelection: First potential marker:', allPotentialVerseMarkers[0]);
+            } else {
+                console.log(`[DEBUG] getVersesFromSelection: No elements matched querySelectorAll("${newSelector}"). Please re-check HTML structure and selector if content is present.`);
+            }
+
+            for (const marker of allPotentialVerseMarkers) {
+                if (range.intersectsNode(marker)) {
+                    verseSpansSet.add(marker);
+                    console.log('[DEBUG] Added marker by intersectsNode:', marker.dataset.usfm);
+                }
+            }
+
+            // 2. Check containers of the selection start and end points
+            let startNode = range.startContainer;
+            while (startNode && startNode !== contentArea) {
+                if (startNode.nodeType === Node.ELEMENT_NODE && startNode.matches(newSelector)) { // Use corrected selector
+                    verseSpansSet.add(startNode);
+                    console.log('[DEBUG] Added marker from startNode traversal:', startNode.dataset.usfm);
+                    break; 
+                }
+                startNode = startNode.parentNode;
+            }
+
+            let endNode = range.endContainer;
+            while (endNode && endNode !== contentArea) {
+                if (endNode.nodeType === Node.ELEMENT_NODE && endNode.matches(newSelector)) { // Use corrected selector
+                    verseSpansSet.add(endNode);
+                    console.log('[DEBUG] Added marker from endNode traversal:', endNode.dataset.usfm);
+                    break;
+                }
+                endNode = endNode.parentNode;
+            }
+            
+            if (verseSpansSet.size > 0) {
+                 console.log(`[DEBUG] Total unique verse spans identified before range fill: ${verseSpansSet.size}`);
+            }
+
+            // Convert Set to Array and sort by document order
+            let sortedSpans = Array.from(verseSpansSet).sort((a, b) => {
+                const position = a.compareDocumentPosition(b);
+                // Check if a PRECEDES b (a is before b)
+                if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1; 
+                // Check if a FOLLOWS b (a is after b)
+                if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1;  
+                return 0;
+            });
+
+            // If we have a range of verses, ensure all verses between the first and last identified are included.
+            if (sortedSpans.length > 1) {
+                const firstSelectedUSFM = sortedSpans[0].dataset.usfm;
+                const lastSelectedUSFM = sortedSpans[sortedSpans.length - 1].dataset.usfm;
+
+                const firstIndexInAllMarkers = allPotentialVerseMarkers.findIndex(s => s.dataset.usfm === firstSelectedUSFM);
+                const lastIndexInAllMarkers = allPotentialVerseMarkers.findIndex(s => s.dataset.usfm === lastSelectedUSFM);
+
+                if (firstIndexInAllMarkers !== -1 && lastIndexInAllMarkers !== -1 && firstIndexInAllMarkers < lastIndexInAllMarkers) {
+                    // Return all verse markers from the content area that fall within this identified range
+                    sortedSpans = allPotentialVerseMarkers.slice(firstIndexInAllMarkers, lastIndexInAllMarkers + 1);
+                }
+            }
+            
+            return sortedSpans;
+        }
+
+        if (chapterContentDisplay) { // Check if element exists before adding listener
+            chapterContentDisplay.addEventListener('mouseup', (event) => {
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                window.currentSelectionDetails = null; // Clear previous selection details
+
+                if (selectedText && selection && !selection.isCollapsed) {
+                    console.log('Selected text:', selectedText);
+                    const verseSpans = getVersesFromSelection(selection, chapterContentDisplay); 
+                    
+                    if (verseSpans.length > 0) {
+                        const verseUsfms = verseSpans.map(span => span.dataset.usfm); 
+                        console.log('Selected verse USFMs:', verseUsfms);
+                        // TODO: Show UI for highlighting/noting
+                        window.currentSelectionDetails = {
+                            text: selectedText,
+                            verseElements: verseSpans,
+                            verseIds: verseUsfms // These are USFMs
+                        };
+                    } else {
+                        console.log('No specific verse elements identified in selection.');
+                    }
+                } 
+            });
+        } else {
+            console.error("'chapter-content-display' element not found when trying to add mouseup listener.");
+        }
+
+        // Clear selection details when clicking outside if nothing was selected
+        document.addEventListener('click', function(event) {
+            // Check if the click is outside the chapter content display area
+            if (chapterContentDisplay && !chapterContentDisplay.contains(event.target)) { // Check chapterContentDisplay exists
+                const selection = window.getSelection();
+                // If selection is collapsed or empty string, clear details
+                if (!selection || selection.isCollapsed || selection.toString().trim() === '') {
+                    if (window.currentSelectionDetails) {
+                         console.log('Clearing selection details due to outside click.');
+                         window.currentSelectionDetails = null;
+                    }
+                    // Potentially hide any annotation UI here
+                }
+            }
+        });
+
+
+        // Initialize
+        async function loadDefaultBibleContent() {
+            try {
+                // 1. Load languages and select default
+                await fetchLanguages(); 
+                if (Array.from(languagesSelect.options).some(opt => opt.value === DEFAULT_LANGUAGE_CODE)) {
+                    languagesSelect.value = DEFAULT_LANGUAGE_CODE;
+                    // Trigger change event for language to update current language display if needed
+                    // and to potentially trigger version loading if fetchLanguages doesn't do it.
+                    // However, we'll explicitly call fetchVersions next for clarity.
+                    if (currentLanguageSpan && languagesSelect.selectedOptions.length > 0) {
+                         currentLanguageSpan.textContent = languagesSelect.selectedOptions[0].text;
+                    }
+                } else {
+                    console.warn(`Default language code '${DEFAULT_LANGUAGE_CODE}' not found in dropdown.`);
+                    // Fallback or error handling if default language isn't available
+                }
+
+                // 2. Load versions for the default language and select default version
+                await fetchVersions(DEFAULT_LANGUAGE_CODE); 
+                if (Array.from(versionsSelect.options).some(opt => opt.value === DEFAULT_VERSION_ID)) {
+                    versionsSelect.value = DEFAULT_VERSION_ID;
+                } else {
+                    console.warn(`Default version ID '${DEFAULT_VERSION_ID}' not found for language '${DEFAULT_LANGUAGE_CODE}'.`);
+                }
+                
+                // Ensure selectedVersionId is set for fetchBooks and fetchChapterContent
+                // fetchBooks internally sets selectedVersionId, but good to be explicit here if changing flow.
+                // selectedVersionId = DEFAULT_VERSION_ID; 
+
+                // 3. Load books for the default version and select default book/chapter
+                // fetchBooks will also set the global selectedVersionId based on its argument.
+                await fetchBooks(DEFAULT_VERSION_ID); 
+                if (Array.from(chaptersSelect.options).some(opt => opt.value === DEFAULT_CHAPTER_USFM)) {
+                    chaptersSelect.value = DEFAULT_CHAPTER_USFM;
+                } else {
+                    console.warn(`Default chapter USFM '${DEFAULT_CHAPTER_USFM}' not found for version '${DEFAULT_VERSION_ID}'.`);
+                }
+
+                // 4. Load chapter content for the default selection
+                await fetchChapterContent(DEFAULT_CHAPTER_USFM);
+
+            } catch (error) {
+                console.error('Error loading default Bible content:', error);
+                chapterContentDisplay.innerHTML = '<p>Could not load default content. Please make selections manually.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure chapterContentDisplay is assigned if not already (though it should be by global script execution if element exists)
+            // However, the primary assignment is now global. This is more of a fallback or for things strictly needing DOMContentLoaded.
+            if (!chapterContentDisplay) {
+                 console.warn('chapterContentDisplay was not initialized globally, attempting in DOMContentLoaded.');
+                 // This line should ideally not be needed if the script runs after the element is parsed.
+                 // const chapterContentDisplay = document.getElementById('chapter-content-display'); // This would be a re-declaration if global is let/var, or error if const
+                 // For safety, we'll rely on the global const declared above.
+            }
+
+            loadDefaultBibleContent(); // Load default content first
+
+            languagesSearchInput.addEventListener('input', () => {
+                fetchLanguages(); // Re-fetch languages when search input changes
+            });
+
+            languagesSelect.addEventListener('change', (event) => {
+                versionsSearchInput.value = ''; // Clear versions search on language change
+                fetchVersions(event.target.value);
+            });
+
+            versionsSearchInput.addEventListener('input', () => {
+                const currentLanguageCode = languagesSelect.value;
+                if (currentLanguageCode) {
+                    fetchVersions(currentLanguageCode);
+                }
+            });
+
+            versionsSelect.addEventListener('change', (event) => {
+                booksSearchInput.value = ''; // Clear books search on version change
+                fetchBooks(event.target.value);
+            });
+
+            booksSearchInput.addEventListener('input', () => {
+                const currentVersionId = versionsSelect.value; // or selectedVersionId
+                if (currentVersionId) {
+                    fetchBooks(currentVersionId);
+                }
+            });
+
+            chaptersSelect.addEventListener('change', (event) => {
+                fetchChapterContent(event.target.value);
+            });
+        });
+
+    </script>
+</body>
+
+</html>
