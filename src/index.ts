@@ -1106,6 +1106,8 @@ connectToDatabase()
 
     const server = app.listen(port, '0.0.0.0', () => {
       console.log(`Server listening on http://0.0.0.0:${port}`);
+      console.log(`[DEBUG] port variable = ${port}`);
+      console.log(`[DEBUG] process.env.PORT = ${process.env.PORT}`);
     });
 
     // Graceful shutdown: stop accepting new connections, finish in-flight
