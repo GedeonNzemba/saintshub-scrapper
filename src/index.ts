@@ -64,7 +64,7 @@ import {
   getCollections,
   getCollectionById
 } from './utils/database/resourceHandlers';const app = express();
-const port = parseInt(process.env.PORT || '5000', 10);
+const port = parseInt(process.env.PORT || '8080', 10);
 
 // ─── Security & body parsing ──────────────────────────────────────
 // Trust proxy headers (Railway, Vercel, Cloudflare) so rate limiter sees real client IP
