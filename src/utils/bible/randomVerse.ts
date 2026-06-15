@@ -279,9 +279,22 @@ async function fetchVerseText(versionId: number, usfm: string): Promise<string |
     );
 }
 
-async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Promise<string | null> {
+async function fetchFromBibleApi(parsed: { book: string; chapter: number; verse: number }): Promise<string | null> {
     try {
-        const parsed = parseUsfm(usfm);
+        const url = `https://bible-api.com/${parsed.book}+${parsed.chapter}:${parsed.verse}?translation=kjv`;
+        console.log(`[bible-api] Fetching fallback for ${parsed.book} ${parsed.chapter}:${parsed.verse}`);
+        const response = await axios.get(url, { timeout: 5000 });
+        const text = response.data?.text;
+        return text ? text.trim() : null;
+    } catch (error) {
+        console.error(`[bible-api] Error fetching fallback:`, error instanceof Error ? error.message : error);
+        return null;
+    }
+}
+
+async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Promise<string | null> {
+    const parsed = parseUsfm(usfm);
+    try {
         const chapterUsfm = `${parsed.book}.${parsed.chapter}`;
         const apiUrl = `https://www.bible.com/bible/${versionId}/${chapterUsfm}.json`;
 
@@ -295,15 +308,14 @@ async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Prom
         // Find the __NEXT_DATA__ script tag
         const nextDataScript = $('#__NEXT_DATA__').html();
         if (!nextDataScript) {
-            console.error('__NEXT_DATA__ not found for verse fetch');
-            return null;
+            throw new Error('__NEXT_DATA__ not found for verse fetch (likely Cloudflare challenge)');
         }
 
         const jsonData = JSON.parse(nextDataScript);
         const contentHtml = jsonData?.props?.pageProps?.chapterInfo?.content;
         
         if (!contentHtml) {
-            return null;
+            throw new Error('chapterInfo content not found');
         }
 
         // Parse the chapter HTML to find the specific verse
@@ -331,11 +343,16 @@ async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Prom
             });
         }
 
+        if (!verseText) {
+            throw new Error('Verse text not found in parsed HTML');
+        }
+
         // Strip any leading verse numbers from the text
-        return verseText ? stripLeadingVerseNumber(verseText) : null;
+        return stripLeadingVerseNumber(verseText);
     } catch (error) {
-        console.error('Error fetching verse text:', error instanceof Error ? error.message : error);
-        return null;
+        console.warn(`[bible.com] Error fetching verse text for ${usfm}:`, error instanceof Error ? error.message : error);
+        console.info(`[bible.com] Falling back to bible-api.com for ${usfm}...`);
+        return fetchFromBibleApi(parsed);
     }
 }
 
