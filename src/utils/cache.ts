@@ -134,8 +134,11 @@ export async function getCached<T>(
   // ── Miss: fetch live, populate both layers ──
   const value = await fetcher();
 
-  // Write-behind: don't await — the response goes out immediately.
-  void writeBehind(fullKey, value, ttlSeconds);
+  // Do not cache null, undefined, or empty string values to avoid caching transient errors
+  if (value !== null && value !== undefined && value !== '') {
+    // Write-behind: don't await — the response goes out immediately.
+    void writeBehind(fullKey, value, ttlSeconds);
+  }
 
   return value;
 }
