@@ -1,6 +1,7 @@
+import { AxiosInstance } from 'axios';
 import { AnyNode } from 'domhandler';
 import { processMessageHtml } from './formatter/processHTML';
-import { client } from './cookie jar/enableCookie';
+import { client as sharedClient } from './cookie jar/enableCookie';
 
 // YEAR LIST  1947 until 1965
 const years = [
@@ -25,24 +26,28 @@ const years = [
     {year: 1965, code: "65-"}
 ]
 
-export async function getSermonsByYear(yearCode: string) {
+export async function getSermonsByYear(
+    yearCode: string,
+    scrapeClient: AxiosInstance = sharedClient
+) {
     try {
         const url = 'https://branham.org/branham/messageaudio.aspx/wmSearchByYear';
         const payload = { formVars: [{ name: "year", value: yearCode }] };
 
-        const response = await client.post(url, payload, {
+        const response = await scrapeClient.post(url, payload, {
             headers: {
                 'Content-Type': 'application/json',
             }
         });
 
-        // Process each HTML entry into individual messages
         const cleanedData = response.data.d
             .filter((item: string) => typeof item === 'string' && item.includes('<div'))
-            .flatMap((html: AnyNode) => processMessageHtml(html)); // Use flatMap to flatten nested arrays
+            .flatMap((html: AnyNode) => processMessageHtml(html));
 
         return { d: cleanedData };
     } catch (error) {
-        console.error({ error: error instanceof Error ? error.message : error });
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('getSermonsByYear failed:', { yearCode, message });
+        throw new Error(`Failed to fetch sermons for year "${yearCode}": ${message}`);
     }
 }

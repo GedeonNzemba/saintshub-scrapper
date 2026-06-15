@@ -1,8 +1,8 @@
+import { AxiosInstance } from 'axios';
 import { AnyNode } from 'domhandler';
 import { processMessageHtml } from './formatter/processHTML';
-import { client } from './cookie jar/enableCookie';
+import { client as sharedClient } from './cookie jar/enableCookie';
 
-// YEAR LIST 
 const series = [
     {title: 'My Life Story', value: 'mylifestory'},
     {title: 'How The Angel Came To Me', value: 'angel'},
@@ -19,27 +19,30 @@ const series = [
     {title: 'The Church Age book (audio)', value: 'cab'}
 ]
 
-// Type Series must be one of the following: 'mylifestory', 'angel', 'seals', 'revelation', 'cod', 'hebrews', 'holy', 'adoption', 'seventy', 'church', 'demonology', 'israel', 'cab'
 export type Series = 'mylifestory' | 'angel' | 'seals' | 'revelation' | 'cod' | 'hebrews' | 'holy' | 'adoption' | 'seventy' | 'church' | 'demonology' | 'israel' | 'cab';
 
-export async function getSermonsBySeries(seriesCode: Series) {
+export async function getSermonsBySeries(
+    seriesCode: Series,
+    scrapeClient: AxiosInstance = sharedClient
+) {
     try {
         const url = 'https://branham.org/branham/messageaudio.aspx/wmSearchBySeries';
         const payload = { formVars: [{ name: "series", value: seriesCode }] };
 
-        const response = await client.post(url, payload, {
+        const response = await scrapeClient.post(url, payload, {
             headers: {
                 'Content-Type': 'application/json',
             }
         });
 
-        // Process each HTML entry into individual messages
         const cleanedData = response.data.d
             .filter((item: string) => typeof item === 'string' && item.includes('<div'))
-            .flatMap((html: AnyNode) => processMessageHtml(html)); // Use flatMap to flatten nested arrays
+            .flatMap((html: AnyNode) => processMessageHtml(html));
 
         return { d: cleanedData };
     } catch (error) {
-        console.error({ error: error instanceof Error ? error.message : error });
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('getSermonsBySeries failed:', { seriesCode, message });
+        throw new Error(`Failed to fetch sermons for series "${seriesCode}": ${message}`);
     }
 }

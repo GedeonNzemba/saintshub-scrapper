@@ -1,7 +1,24 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
+import { getCached, TTL } from '../cache';
 
 const AXIOS_TIMEOUT = 10000;
+
+// Shared axios client for bible.com verse text fetches. Retry on transient failure.
+const bibleClient = axios.create({ timeout: AXIOS_TIMEOUT });
+axiosRetry(bibleClient, {
+    retries: 2,
+    retryDelay: axiosRetry.exponentialDelay,
+    retryCondition: (error: AxiosError) => {
+        if (axiosRetry.isNetworkError(error)) return true;
+        const status = error.response?.status;
+        if (status === 429) return true;
+        if (status && status >= 500 && status < 600) return true;
+        return false;
+    },
+    shouldResetTimeout: true,
+});
 
 const USER_AGENT_HEADER = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -251,21 +268,25 @@ function stripLeadingVerseNumber(text: string): string {
 }
 
 /**
- * Fetch the actual verse text from Bible.com
- * @param versionId - Bible version ID (default: 1 for KJV)
- * @param usfm - USFM reference like "GEN.1.1"
+ * Fetch the actual verse text from Bible.com. Cached for 7 days because
+ * Bible verse text is immutable per (versionId, usfm).
  */
 async function fetchVerseText(versionId: number, usfm: string): Promise<string | null> {
+    return getCached(
+        `bible:verse-text:${versionId}:${encodeURIComponent(usfm)}`,
+        TTL.VERY_LONG,
+        () => fetchVerseTextFromUpstream(versionId, usfm)
+    );
+}
+
+async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Promise<string | null> {
     try {
         const parsed = parseUsfm(usfm);
         const chapterUsfm = `${parsed.book}.${parsed.chapter}`;
-        
-        // Fetch the chapter content
         const apiUrl = `https://www.bible.com/bible/${versionId}/${chapterUsfm}.json`;
-        
-        const response = await axios.get(apiUrl, {
+
+        const response = await bibleClient.get(apiUrl, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
 
         const html = response.data;
@@ -368,30 +389,32 @@ export async function getMultipleRandomVerses(
     const shuffled = [...POPULAR_VERSES].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, maxCount);
     
-    const verses: RandomVerse[] = [];
-    
-    for (const verse of selected) {
-        const parsed = parseUsfm(verse.usfm);
-        let verseText = '';
+    // PARALLELIZED: fetch all verse texts concurrently instead of one-by-one.
+    // For 5 verses with no pre-filled text, this changes ~50s sequential
+    // (5 × 10s timeout) into ~10s worst case. Most will be cache hits anyway.
+    const verses: RandomVerse[] = await Promise.all(
+        selected.map(async (verse): Promise<RandomVerse> => {
+            const parsed = parseUsfm(verse.usfm);
+            let verseText = '';
 
-        if (verse.text) {
-            // Use pre-filled text
-            verseText = verse.text;
-        } else if (fetchText) {
-            const fetchedText = await fetchVerseText(versionId, verse.usfm);
-            verseText = fetchedText || `[Verse text for ${verse.reference}]`;
-        }
-        
-        verses.push({
-            reference: verse.reference,
-            text: verseText,
-            bookName: BOOK_NAMES[parsed.book] || parsed.book,
-            chapter: parsed.chapter,
-            verse: parsed.verse,
-            versionId: versionId
-        });
-    }
-    
+            if (verse.text) {
+                verseText = verse.text;
+            } else if (fetchText) {
+                const fetchedText = await fetchVerseText(versionId, verse.usfm);
+                verseText = fetchedText || `[Verse text for ${verse.reference}]`;
+            }
+
+            return {
+                reference: verse.reference,
+                text: verseText,
+                bookName: BOOK_NAMES[parsed.book] || parsed.book,
+                chapter: parsed.chapter,
+                verse: parsed.verse,
+                versionId: versionId
+            };
+        })
+    );
+
     return verses;
 }
 

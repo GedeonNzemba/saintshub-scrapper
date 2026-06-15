@@ -1,8 +1,26 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
 import { configurationApiUrl, versionsApiUrl, chapterApiUrl, readableApiUrl } from './utils/api';
+import { getCached, TTL } from '../cache';
 
 const AXIOS_TIMEOUT = 10000; // 10 seconds
+
+// Dedicated axios client for bible.com with retry on transient failures.
+// Shared safely across requests because no cookies are involved.
+const bibleClient = axios.create({ timeout: AXIOS_TIMEOUT });
+axiosRetry(bibleClient, {
+  retries: 2,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error: AxiosError) => {
+    if (axiosRetry.isNetworkError(error)) return true;
+    const status = error.response?.status;
+    if (status === 429) return true;
+    if (status && status >= 500 && status < 600) return true;
+    return false;
+  },
+  shouldResetTimeout: true,
+});
 
 interface BibleLanguageConfig {
     local_name: string;
@@ -87,13 +105,26 @@ const USER_AGENT_HEADER = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 };
 
-// Fetches and processes the list of available Bible languages
+// Fetches and processes the list of available Bible languages.
+// Cached for 7 days — language list changes essentially never.
+// Filtering happens AFTER cache, so different ?search= values share one cache entry.
 export async function fetchBibleLanguages(searchQuery?: string): Promise<LanguageInfo[]> {
+    const allLanguages = await getCached(
+        'bible:languages',
+        TTL.VERY_LONG,
+        () => fetchBibleLanguagesFromUpstream()
+    );
+
+    if (!searchQuery) return allLanguages;
+    const q = searchQuery.toLowerCase();
+    return allLanguages.filter(lang => lang.name.toLowerCase().includes(q));
+}
+
+async function fetchBibleLanguagesFromUpstream(): Promise<LanguageInfo[]> {
     try {
         console.log(`Fetching languages from: ${configurationApiUrl}`);
-        const response = await axios.get(configurationApiUrl, {
+        const response = await bibleClient.get(configurationApiUrl, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
 
         // Assuming the data structure contains 'default_versions' array nested within response.data
@@ -105,20 +136,11 @@ export async function fetchBibleLanguages(searchQuery?: string): Promise<Languag
         }
 
         // Map to the desired format
-        let languages = languageConfigs.map(lang => ({
+        const languages = languageConfigs.map(lang => ({
             name: lang.local_name,
             code: lang.iso_639_3
         }));
 
-        // Filter languages if searchQuery is provided
-        if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            languages = languages.filter(lang => 
-                lang.name.toLowerCase().includes(lowercasedQuery)
-            );
-        }
-
-        // console.log(`Successfully fetched and processed ${languages.length} languages.`);
         return languages;
 
     } catch (error) {
@@ -131,16 +153,27 @@ export async function fetchBibleLanguages(searchQuery?: string): Promise<Languag
     }
 }
 
-// Fetches and processes available Bible versions for a given language code
+// Fetches and processes available Bible versions for a given language code.
+// Cached for 24 hours per language. Filtering happens AFTER cache.
 export async function fetchBibleVersions(languageCode: string, searchQuery?: string): Promise<VersionInfo[]> {
-    // Construct the specific API URL for the language
+    const allVersions = await getCached(
+        `bible:versions:${encodeURIComponent(languageCode)}`,
+        TTL.LONG,
+        () => fetchBibleVersionsFromUpstream(languageCode)
+    );
+
+    if (!searchQuery) return allVersions;
+    const q = searchQuery.toLowerCase();
+    return allVersions.filter(v => v.name.toLowerCase().includes(q));
+}
+
+async function fetchBibleVersionsFromUpstream(languageCode: string): Promise<VersionInfo[]> {
     const apiUrl = versionsApiUrl(languageCode);
     console.log(`Fetching versions for language code '${languageCode}' from: ${apiUrl}`);
 
     try {
-        const response = await axios.get(apiUrl, {
+        const response = await bibleClient.get(apiUrl, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
 
         // Log the entire response.data to inspect its structure
@@ -163,22 +196,11 @@ export async function fetchBibleVersions(languageCode: string, searchQuery?: str
             throw new Error(`Failed to parse versions data for language code: ${languageCode}`);
         }
 
-        // Map to the desired format { name: string, id: number | string, abbreviation?: string }
-        // The frontend bible.html uses 'version.name' for display and 'version.id' for value.
-        // The VersionInfo interface expects name, id, and optionally abbreviation.
-        let versions = versionData.map(v => ({
-            name: v.name || v.local_title || v.local_abbreviation, // Prioritize fuller name if available
+        const versions = versionData.map(v => ({
+            name: v.name || v.local_title || v.local_abbreviation,
             id: v.id,
-            abbreviation: v.abbreviation || v.local_abbreviation // Store abbreviation if needed elsewhere
+            abbreviation: v.abbreviation || v.local_abbreviation
         }));
-
-        // Filter versions if searchQuery is provided
-        if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            versions = versions.filter(version => 
-                version.name.toLowerCase().includes(lowercasedQuery)
-            );
-        }
 
         console.log(`Successfully fetched and processed ${versions.length} versions for language code '${languageCode}'.`);
         return versions;
@@ -192,16 +214,30 @@ export async function fetchBibleVersions(languageCode: string, searchQuery?: str
     }
 }
 
-// Fetches and processes the list of books and chapters for a given Bible version ID
+// Fetches and processes the list of books and chapters for a given Bible version ID.
+// Cached for 7 days per versionId — book structure essentially never changes.
 export async function fetchBibleBooks(versionId: string, searchQuery?: string): Promise<BookInfo[]> {
-    // Construct the API URL by replacing the placeholder with the actual version ID
+    const allBooks = await getCached(
+        `bible:books:${encodeURIComponent(versionId)}`,
+        TTL.VERY_LONG,
+        () => fetchBibleBooksFromUpstream(versionId)
+    );
+
+    if (!searchQuery) return allBooks;
+    const q = searchQuery.toLowerCase();
+    return allBooks.filter(book =>
+        book.name.toLowerCase().includes(q) ||
+        book.abbreviation.toLowerCase().includes(q)
+    );
+}
+
+async function fetchBibleBooksFromUpstream(versionId: string): Promise<BookInfo[]> {
     const apiUrl = chapterApiUrl(versionId);
     console.log(`Fetching books for version ID '${versionId}' from: ${apiUrl}`);
 
     try {
-        const response = await axios.get(apiUrl, {
+        const response = await bibleClient.get(apiUrl, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
 
         // Adjust path based on actual API response structure if needed
@@ -213,28 +249,18 @@ export async function fetchBibleBooks(versionId: string, searchQuery?: string): 
         }
 
         // Map to the desired format
-        let books = bookData.map(b => ({
-            name: b.human,  // Use short name (e.g., "Genesis", "Genèse") for header display
-            nameLong: b.human_long, // Long/detailed name for book picker "Detailed" mode
+        const books = bookData.map(b => ({
+            name: b.human,
+            nameLong: b.human_long,
             abbreviation: b.abbreviation,
             chapters: b.chapters
-                .filter(c => c.canonical) // Only include canonical chapters if needed
+                .filter(c => c.canonical)
                 .map(c => ({
                     number: c.human,
                     usfm: c.usfm
                 }))
         }));
 
-        // Filter books if searchQuery is provided
-        if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            books = books.filter(book => 
-                book.name.toLowerCase().includes(lowercasedQuery) || 
-                book.abbreviation.toLowerCase().includes(lowercasedQuery)
-            );
-        }
-
-        //console.log(`Successfully fetched and processed ${books.length} books for version ID '${versionId}'.`);
         return books;
 
     } catch (error) {
@@ -247,8 +273,19 @@ export async function fetchBibleBooks(versionId: string, searchQuery?: string): 
 }
 
 // Fetches chapter content, processes HTML classes, and returns it.
+// Cached for 24 hours per (versionId, chapterUsfm).
+// Note: jsonResponse contains a large parsed JSON blob. If we hit MongoDB's
+// 16MB doc limit on this, the cache write will silently fail and we'll
+// just always serve from upstream — that's fine.
 export async function fetchAndProcessChapter(versionId: string, chapterUsfm: string): Promise<ChapterContentResponse> {
-    // Construct the API URL
+    return getCached(
+        `bible:chapter:${encodeURIComponent(versionId)}:${encodeURIComponent(chapterUsfm)}`,
+        TTL.LONG,
+        () => fetchAndProcessChapterFromUpstream(versionId, chapterUsfm)
+    );
+}
+
+async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm: string): Promise<ChapterContentResponse> {
     const apiUrl = readableApiUrl
         .replace('<version_id>', String(versionId))
         .replace('<chapter_usfm_plus_version_abbreviation>', chapterUsfm);
@@ -256,9 +293,8 @@ export async function fetchAndProcessChapter(versionId: string, chapterUsfm: str
     console.log(`Fetching chapter content for version ID '${versionId}', USFM '${chapterUsfm}' from: ${apiUrl}`);
 
     try {
-        const response = await axios.get<string>(apiUrl, { // Expect a string (HTML) response
+        const response = await bibleClient.get<string>(apiUrl, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
 
         // Log the raw HTML response to help with debugging if needed

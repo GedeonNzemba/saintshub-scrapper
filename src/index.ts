@@ -1,9 +1,10 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { AnyNode } from 'domhandler';
 import { fetchLanguages } from './utils/fetchLanguages';
 import { processMessageHtml } from './utils/formatter/processHTML';
 import { getSermonsByYear } from './utils/getSermonsByYear';
-import { client } from './utils/cookie jar/enableCookie';
+import { createScrapeClient } from './utils/cookie jar/enableCookie';
 import { changeLanguage } from './utils/change language/changeLanguage';
 import { getSermonsByLength, Lenght } from './utils/getSermonsByLength';
 import { getSermonsBySeries, Series } from './utils/getSermonsBySeries';
@@ -21,6 +22,9 @@ import {
     getAvailableVersesCount 
 } from './utils/bible/randomVerse';
 import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { 
     fetchBibleLanguages, 
@@ -40,7 +44,9 @@ import {
     updateNote,
     deleteNote
 } from './utils/annotationHandlers';
-import { connectToDatabase } from './utils/database/connection';
+import { connectToDatabase, closeDatabaseConnection, pingDatabase } from './utils/database/connection';
+import { initializeAnnotationIndexes } from './utils/annotationHandlers';
+import { initializeCacheIndexes, getCached, TTL } from './utils/cache';
 import { 
   createResource, 
   getAllResources, 
@@ -60,39 +66,85 @@ import {
 } from './utils/database/resourceHandlers';const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(express.json());
-app.use(cors());
+// ─── Security & body parsing ──────────────────────────────────────
+// Trust proxy headers (Railway, Vercel, Cloudflare) so rate limiter sees real client IP
+app.set('trust proxy', 1);
 
-// Serve static files for bible.html and its assets from src/utils/bible at the root URL path `/`
+// Security headers. crossOriginResourcePolicy disabled because we serve audio
+// streams and PDFs cross-origin to the React Native app.
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// Response compression (gzip/brotli) for JSON + HTML payloads
+app.use(compression());
+
+// JSON body parser with explicit size limit to prevent memory exhaustion
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// CORS allow-list — set EXPO_PUBLIC_ALLOWED_ORIGINS in Railway as comma-separated
+// origins. Defaults to "*" so the existing mobile app keeps working until you
+// lock it down. Mobile RN apps don't send Origin headers anyway; this mainly
+// protects the admin dashboard.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+app.use(
+  cors({
+    origin: allowedOrigins.length === 0 ? true : allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  })
+);
+
+// Per-IP rate limit on API routes. 300 req/min is generous for normal users
+// but blocks scraping/abuse. Set RATE_LIMIT_MAX in env to tune.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX || '300', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api/', apiLimiter);
+
+// ─── Static assets ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'utils/bible')));
-
-// Serve static files for fonts from 'test 2/fonts/' accessible via '/static_fonts/' URL path
 app.use('/static_fonts', express.static(path.join(__dirname, '../fonts')));
-
-// Serve admin dashboard
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
-// Basic logging middleware
+// Lightweight request logging. In production we should swap to a structured
+// logger (Winston/Pino) — that's Phase 3.
 app.use((req, res, next) => {
   console.log(`Request: ${req.method} ${req.url}`);
   next();
 });
 
-// scrapper
-
-
-// GET SERVER STATUS
-app.get('/', (req, res) => {
+// ─── Health checks ────────────────────────────────────────────────
+// Liveness: process is up. Used by Railway to know the container is alive.
+app.get('/', (_req, res) => {
   res.send('Server is up and running!');
+});
+
+// Readiness: process is up AND can reach MongoDB. Use this in your load
+// balancer / orchestrator to drain unhealthy instances.
+app.get('/health', async (_req, res) => {
+  const dbHealthy = await pingDatabase();
+  if (!dbHealthy) {
+    return res.status(503).json({ status: 'unhealthy', database: 'disconnected' });
+  }
+  res.json({ status: 'healthy', database: 'connected' });
 });
 
 
 // ---------------  SERMON API --------------
 
 // GET LANGUAGES
+// Cached 7d — branham.org's supported language list is essentially static.
 app.get('/api/v3/languages', async (req, res) => {
   try {
-    const result = await fetchLanguages();
+    const result = await getCached(
+      'sermon:languages',
+      TTL.VERY_LONG,
+      () => fetchLanguages()
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
@@ -100,13 +152,16 @@ app.get('/api/v3/languages', async (req, res) => {
 });
 
 // CHANGE LANGUAGE
+// NOTE: This endpoint is largely a no-op now that each request uses its own
+// cookie jar. We keep it for backwards compatibility with the frontend.
 app.get('/api/v3/changeLanguage', async (req: Request<{}, {}, {}, { languageCode: string }>, res: Response) => {
   const { languageCode } = req.query;
   try {
     if (!languageCode) {
       return res.status(400).json({ error: 'Missing language code' });
     }
-    await changeLanguage(languageCode);
+    const scrapeClient = createScrapeClient();
+    await changeLanguage(languageCode, scrapeClient);
     res.json({ message: 'Language changed successfully' });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
@@ -132,25 +187,25 @@ app.get('/api/v3/sermons', async (req: Request<{}, {}, {}, { languageCode: strin
       return res.status(400).json({ error: 'Missing language code' });
     }
 
-    // 1. Set language
-    await changeLanguage(languageCode);
-
-    // 2. Now call the search endpoint
-    const response = await client.post(
-      'https://branham.org/branham/messageaudio.aspx/wmSearch',
-      { formVars: [{ name: 'searchcriteria', value: '' }] },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-        }
+    // Cache the FULL scrape (pre-pagination), keyed by language. Pagination
+    // happens per-request from the cached array, so ?page=1 and ?page=2
+    // share the same cache entry.
+    const cleanedData = await getCached<unknown[]>(
+      `sermon:all:${encodeURIComponent(languageCode)}`,
+      TTL.MEDIUM,
+      async () => {
+        const scrapeClient = createScrapeClient();
+        await changeLanguage(languageCode, scrapeClient);
+        const response = await scrapeClient.post(
+          'https://branham.org/branham/messageaudio.aspx/wmSearch',
+          { formVars: [{ name: 'searchcriteria', value: '' }] },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        return response.data.d
+          .filter((item: string) => typeof item === 'string' && item.includes('<div'))
+          .flatMap((html: AnyNode) => processMessageHtml(html));
       }
     );
-
-    // Process each HTML entry into individual messages
-    const cleanedData = response.data.d
-      .filter((item: string) => typeof item === 'string' && item.includes('<div'))
-      .flatMap((html: AnyNode) => processMessageHtml(html));
 
     const paginatedData = paginateArray(cleanedData, page, limit);
     res.json({ d: paginatedData });
@@ -170,22 +225,18 @@ app.get('/api/v3/sermonsByYear', async (req: Request<{}, {}, {}, { languageCode:
       return res.status(400).json({ error: 'Missing language code or year code' });
     }
 
-    // 1. Set language
-    await changeLanguage(languageCode);
+    const fullResult = await getCached<{ d: any[] }>(
+      `sermon:byYear:${encodeURIComponent(languageCode)}:${encodeURIComponent(yearCode)}`,
+      TTL.MEDIUM,
+      async () => {
+        const scrapeClient = createScrapeClient();
+        await changeLanguage(languageCode, scrapeClient);
+        return getSermonsByYear(yearCode, scrapeClient);
+      }
+    );
 
-    const fullResult = await getSermonsByYear(yearCode);
-    
-    let paginatedResult = fullResult;
-    if (fullResult && typeof fullResult === 'object' && fullResult !== null && 'd' in fullResult && Array.isArray((fullResult as any).d)) {
-      const itemsToPaginate: any[] = (fullResult as any).d;
-      const paginatedItems = paginateArray(itemsToPaginate, page, limit);
-      paginatedResult = { ...(fullResult as object), d: paginatedItems };
-    } else if (Array.isArray(fullResult)) {
-      // This case might occur if the result is a simple array, though typically it's { d: [...] }
-      paginatedResult = { d: paginateArray(fullResult, page, limit) };
-    }
-
-    res.json(paginatedResult);
+    const itemsToPaginate = Array.isArray(fullResult?.d) ? fullResult.d : [];
+    res.json({ ...fullResult, d: paginateArray(itemsToPaginate, page, limit) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
   }
@@ -202,21 +253,18 @@ app.get('/api/v3/sermonsByLength', async (req: Request<{}, {}, {}, { languageCod
       return res.status(400).json({ error: 'Missing language code or length code' });
     }
 
-    // 1. Set language
-    await changeLanguage(languageCode);
+    const fullResult = await getCached<{ d: any[] }>(
+      `sermon:byLength:${encodeURIComponent(languageCode)}:${encodeURIComponent(lengthCode)}`,
+      TTL.MEDIUM,
+      async () => {
+        const scrapeClient = createScrapeClient();
+        await changeLanguage(languageCode, scrapeClient);
+        return getSermonsByLength(lengthCode, scrapeClient);
+      }
+    );
 
-    const fullResult = await getSermonsByLength(lengthCode);
-
-    let paginatedResult = fullResult;
-    if (fullResult && typeof fullResult === 'object' && fullResult !== null && 'd' in fullResult && Array.isArray((fullResult as any).d)) {
-      const itemsToPaginate: any[] = (fullResult as any).d;
-      const paginatedItems = paginateArray(itemsToPaginate, page, limit);
-      paginatedResult = { ...(fullResult as object), d: paginatedItems };
-    } else if (Array.isArray(fullResult)) {
-      paginatedResult = { d: paginateArray(fullResult, page, limit) };
-    }
-
-    res.json(paginatedResult);
+    const itemsToPaginate = Array.isArray(fullResult?.d) ? fullResult.d : [];
+    res.json({ ...fullResult, d: paginateArray(itemsToPaginate, page, limit) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
   }
@@ -233,21 +281,18 @@ app.get('/api/v3/sermonsBySeries', async (req: Request<{}, {}, {}, { languageCod
       return res.status(400).json({ error: 'Missing language code or series code' });
     }
 
-    // 1. Set language
-    await changeLanguage(languageCode);
+    const fullResult = await getCached<{ d: any[] }>(
+      `sermon:bySeries:${encodeURIComponent(languageCode)}:${encodeURIComponent(seriesCode)}`,
+      TTL.MEDIUM,
+      async () => {
+        const scrapeClient = createScrapeClient();
+        await changeLanguage(languageCode, scrapeClient);
+        return getSermonsBySeries(seriesCode, scrapeClient);
+      }
+    );
 
-    const fullResult = await getSermonsBySeries(seriesCode);
-
-    let paginatedResult = fullResult;
-    if (fullResult && typeof fullResult === 'object' && fullResult !== null && 'd' in fullResult && Array.isArray((fullResult as any).d)) {
-      const itemsToPaginate: any[] = (fullResult as any).d;
-      const paginatedItems = paginateArray(itemsToPaginate, page, limit);
-      paginatedResult = { ...(fullResult as object), d: paginatedItems };
-    } else if (Array.isArray(fullResult)) {
-      paginatedResult = { d: paginateArray(fullResult, page, limit) };
-    }
-
-    res.json(paginatedResult);
+    const itemsToPaginate = Array.isArray(fullResult?.d) ? fullResult.d : [];
+    res.json({ ...fullResult, d: paginateArray(itemsToPaginate, page, limit) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
   }
@@ -264,21 +309,20 @@ app.get('/api/v3/searchSermons', async (req: Request<{}, {}, {}, { languageCode:
       return res.status(400).json({ error: 'Missing language code or key' });
     }
 
-    // 1. Set language
-    await changeLanguage(languageCode);
+    // Search uses a shorter TTL — results are user-specific queries and we
+    // don't want stale matches lingering too long.
+    const fullResult = await getCached<{ d: any[] }>(
+      `sermon:search:${encodeURIComponent(languageCode)}:${encodeURIComponent(key)}`,
+      TTL.SHORT,
+      async () => {
+        const scrapeClient = createScrapeClient();
+        await changeLanguage(languageCode, scrapeClient);
+        return searchSermons(key, scrapeClient);
+      }
+    );
 
-    const fullResult = await searchSermons(key);
-
-    let paginatedResult = fullResult;
-    if (fullResult && typeof fullResult === 'object' && fullResult !== null && 'd' in fullResult && Array.isArray((fullResult as any).d)) {
-      const itemsToPaginate: any[] = (fullResult as any).d;
-      const paginatedItems = paginateArray(itemsToPaginate, page, limit);
-      paginatedResult = { ...(fullResult as object), d: paginatedItems };
-    } else if (Array.isArray(fullResult)) {
-      paginatedResult = { d: paginateArray(fullResult, page, limit) };
-    }
-
-    res.json(paginatedResult);
+    const itemsToPaginate = Array.isArray(fullResult?.d) ? fullResult.d : [];
+    res.json({ ...fullResult, d: paginateArray(itemsToPaginate, page, limit) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
   }
@@ -304,6 +348,10 @@ app.get('/api/v3/readSermonBook', async (req: Request<{}, {}, {}, { url: string 
 
     // At this point, response is an AxiosResponse and has .data
     res.setHeader('Content-Type', 'application/pdf');
+    // Tear down the upstream stream if the client disconnects mid-download,
+    // otherwise the upstream socket stays open and leaks file descriptors.
+    res.on('close', () => response.data.destroy());
+    response.data.on('error', (err: unknown) => console.error('readSermonBook stream error:', err));
     response.data.pipe(res);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
@@ -331,7 +379,8 @@ app.get('/api/v3/downloadSermonBook', async (req: Request<{}, {}, {}, { url: str
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    // Pipe the PDF stream directly to the response
+    res.on('close', () => response.data.destroy());
+    response.data.on('error', (err: unknown) => console.error('downloadSermonBook stream error:', err));
     response.data.pipe(res);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : error });
@@ -350,9 +399,8 @@ app.get('/api/v3/downloadSermon', async (req: Request<{}, {}, {}, { url: string 
     // The downloadSermon utility now returns an object that includes the axios response itself
     const downloadResult = await downloadSermon(url);
 
-    // Check for error from downloadSermon
-    if (downloadResult.error) {
-      // Use a more specific error code if possible, e.g., 502 Bad Gateway if the external download failed
+    // Discriminated union: 'error' key present means the helper failed.
+    if ('error' in downloadResult) {
       return res.status(500).json({ error: `Failed to initiate sermon download: ${downloadResult.error}` });
     }
 
@@ -369,14 +417,15 @@ app.get('/api/v3/downloadSermon', async (req: Request<{}, {}, {}, { url: string 
 
     // Pass through Content-Length if available from the source
     const contentLength = axiosResponse.headers['content-length'];
-    if (contentLength) {
+    if (typeof contentLength === 'string') {
       res.setHeader('X-Content-Length', contentLength);
       // Also set the standard Content-Length if you are sure about the size
       // and that no other transformations will change it.
       // res.setHeader('Content-Length', contentLength);
     }
 
-    // Pipe the file stream directly to the response
+    // Tear down upstream stream on client disconnect to prevent FD leaks
+    res.on('close', () => axiosResponse.data.destroy());
     axiosResponse.data.pipe(res);
   } catch (error) {
     // It's good practice to log the actual error on the server side
@@ -442,13 +491,21 @@ app.get('/api/v4/daily-content', async (req: Request<{}, {}, {}, { language?: st
 });
 
 // GET DAILY QUOTE AND VERSE (COMBINED LANGUAGES)
+// Parallelized + tolerant: if French fails, return English-only instead of 500.
 app.get('/api/v4/daily-content-combined', async (req: Request, res: Response) => {
     try {
-        // Fetch both English and French content
-        const englishContent = await fetchDailyQuoteAndVerseData('en');
-        const frenchContent = await fetchDailyQuoteAndVerseData('fr');
-        
-        // Combine the content
+        const [enResult, frResult] = await Promise.allSettled([
+            fetchDailyQuoteAndVerseData('en'),
+            fetchDailyQuoteAndVerseData('fr'),
+        ]);
+
+        if (enResult.status === 'rejected') throw enResult.reason;
+        const englishContent = enResult.value;
+        const frenchContent = frResult.status === 'fulfilled' ? frResult.value : englishContent;
+        if (frResult.status === 'rejected') {
+            console.error('French daily content failed (using English fallback):', frResult.reason);
+        }
+
         const combinedContent = {
             dailyVerse: {
                 reference: englishContent.dailyVerse.reference,
@@ -517,25 +574,25 @@ app.get('/api/v4/verse-of-the-day-combined', async (req: Request, res: Response)
 // --------------- ANNOTATION API ROUTES --------------- 
 
 // --- Highlights ---
-app.post('/api/v4/annotations/highlights', (req: Request, res: Response) => {
+app.post('/api/v4/annotations/highlights', async (req: Request, res: Response) => {
     try {
-        // Basic validation (more robust validation should be added)
         const { userId, versionId, bookUsfm, chapter, verses, color } = req.body;
         if (!userId || !versionId || !bookUsfm || chapter === undefined || !verses || !color) {
             return res.status(400).json({ error: 'Missing required fields for highlight.' });
         }
-        const newHighlight = createHighlight({ userId, versionId, bookUsfm, chapter, verses, color });
+        const newHighlight = await createHighlight({ userId, versionId, bookUsfm, chapter, verses, color });
         res.status(201).json(newHighlight);
     } catch (error) {
+        console.error('Error creating highlight:', error);
         res.status(500).json({ error: 'Failed to create highlight.' });
     }
 });
 
-app.get('/api/v4/annotations/highlights', (req: Request, res: Response) => {
+app.get('/api/v4/annotations/highlights', async (req: Request, res: Response) => {
     try {
         const { userId, versionId, bookUsfm, chapter, verses } = req.query;
         const chapterNum = chapter ? parseInt(chapter as string) : undefined;
-        const highlights = getHighlights({
+        const highlights = await getHighlights({
             userId: userId as string | undefined,
             versionId: versionId as string | undefined,
             bookUsfm: bookUsfm as string | undefined,
@@ -544,68 +601,73 @@ app.get('/api/v4/annotations/highlights', (req: Request, res: Response) => {
         });
         res.json(highlights);
     } catch (error) {
+        console.error('Error fetching highlights:', error);
         res.status(500).json({ error: 'Failed to retrieve highlights.' });
     }
 });
 
-app.get('/api/v4/annotations/highlights/:highlightId', (req: Request, res: Response) => {
+app.get('/api/v4/annotations/highlights/:highlightId', async (req: Request, res: Response) => {
     try {
-        const highlight = getHighlightById(req.params.highlightId);
+        const highlight = await getHighlightById(req.params.highlightId);
         if (highlight) {
             res.json(highlight);
         } else {
             res.status(404).json({ error: 'Highlight not found.' });
         }
     } catch (error) {
+        console.error('Error fetching highlight:', error);
         res.status(500).json({ error: 'Failed to retrieve highlight.' });
     }
 });
 
-app.put('/api/v4/annotations/highlights/:highlightId', (req: Request, res: Response) => {
+app.put('/api/v4/annotations/highlights/:highlightId', async (req: Request, res: Response) => {
     try {
-        const updatedHighlight = updateHighlight(req.params.highlightId, req.body);
+        const updatedHighlight = await updateHighlight(req.params.highlightId, req.body);
         if (updatedHighlight) {
             res.json(updatedHighlight);
         } else {
             res.status(404).json({ error: 'Highlight not found.' });
         }
     } catch (error) {
+        console.error('Error updating highlight:', error);
         res.status(500).json({ error: 'Failed to update highlight.' });
     }
 });
 
-app.delete('/api/v4/annotations/highlights/:highlightId', (req: Request, res: Response) => {
+app.delete('/api/v4/annotations/highlights/:highlightId', async (req: Request, res: Response) => {
     try {
-        const success = deleteHighlight(req.params.highlightId);
+        const success = await deleteHighlight(req.params.highlightId);
         if (success) {
-            res.status(204).send(); // No content
+            res.status(204).send();
         } else {
             res.status(404).json({ error: 'Highlight not found.' });
         }
     } catch (error) {
+        console.error('Error deleting highlight:', error);
         res.status(500).json({ error: 'Failed to delete highlight.' });
     }
 });
 
 // --- Notes ---
-app.post('/api/v4/annotations/notes', (req: Request, res: Response) => {
+app.post('/api/v4/annotations/notes', async (req: Request, res: Response) => {
     try {
         const { userId, versionId, bookUsfm, chapter, verses, text } = req.body;
         if (!userId || !versionId || !bookUsfm || chapter === undefined || !verses || !text) {
             return res.status(400).json({ error: 'Missing required fields for note.' });
         }
-        const newNote = createNote({ userId, versionId, bookUsfm, chapter, verses, text });
+        const newNote = await createNote({ userId, versionId, bookUsfm, chapter, verses, text });
         res.status(201).json(newNote);
     } catch (error) {
+        console.error('Error creating note:', error);
         res.status(500).json({ error: 'Failed to create note.' });
     }
 });
 
-app.get('/api/v4/annotations/notes', (req: Request, res: Response) => {
+app.get('/api/v4/annotations/notes', async (req: Request, res: Response) => {
     try {
         const { userId, versionId, bookUsfm, chapter, verses } = req.query;
         const chapterNum = chapter ? parseInt(chapter as string) : undefined;
-        const notes = getNotes({
+        const notes = await getNotes({
             userId: userId as string | undefined,
             versionId: versionId as string | undefined,
             bookUsfm: bookUsfm as string | undefined,
@@ -614,45 +676,49 @@ app.get('/api/v4/annotations/notes', (req: Request, res: Response) => {
         });
         res.json(notes);
     } catch (error) {
+        console.error('Error fetching notes:', error);
         res.status(500).json({ error: 'Failed to retrieve notes.' });
     }
 });
 
-app.get('/api/v4/annotations/notes/:noteId', (req: Request, res: Response) => {
+app.get('/api/v4/annotations/notes/:noteId', async (req: Request, res: Response) => {
     try {
-        const note = getNoteById(req.params.noteId);
+        const note = await getNoteById(req.params.noteId);
         if (note) {
             res.json(note);
         } else {
             res.status(404).json({ error: 'Note not found.' });
         }
     } catch (error) {
+        console.error('Error fetching note:', error);
         res.status(500).json({ error: 'Failed to retrieve note.' });
     }
 });
 
-app.put('/api/v4/annotations/notes/:noteId', (req: Request, res: Response) => {
+app.put('/api/v4/annotations/notes/:noteId', async (req: Request, res: Response) => {
     try {
-        const updatedNote = updateNote(req.params.noteId, req.body);
+        const updatedNote = await updateNote(req.params.noteId, req.body);
         if (updatedNote) {
             res.json(updatedNote);
         } else {
             res.status(404).json({ error: 'Note not found.' });
         }
     } catch (error) {
+        console.error('Error updating note:', error);
         res.status(500).json({ error: 'Failed to update note.' });
     }
 });
 
-app.delete('/api/v4/annotations/notes/:noteId', (req: Request, res: Response) => {
+app.delete('/api/v4/annotations/notes/:noteId', async (req: Request, res: Response) => {
     try {
-        const success = deleteNote(req.params.noteId);
+        const success = await deleteNote(req.params.noteId);
         if (success) {
             res.status(204).send();
         } else {
             res.status(404).json({ error: 'Note not found.' });
         }
     } catch (error) {
+        console.error('Error deleting note:', error);
         res.status(500).json({ error: 'Failed to delete note.' });
     }
 });
@@ -1018,18 +1084,59 @@ app.get('/api/v4/resources/:id/collections/:collectionId', async (req: Request, 
   }
 });
 
-// ---------------  NOTE  --------------
+// ─── Startup & graceful shutdown ──────────────────────────────────
 
-// Initialize database and start server
+// Catch any otherwise-unhandled async errors so the process logs them
+// instead of crashing silently.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
+
 connectToDatabase()
   .then(async () => {
-    // Initialize resource indexes
-    await initializeResourceIndexes();
-    console.log('✅ Resource indexes initialized');
-    
-    app.listen(port, () => {
+    await Promise.all([
+      initializeResourceIndexes(),
+      initializeAnnotationIndexes(),
+      initializeCacheIndexes(),
+    ]);
+    console.log('✅ Database indexes initialized');
+
+    const server = app.listen(port, () => {
       console.log(`Server listening on http://localhost:${port}`);
     });
+
+    // Graceful shutdown: stop accepting new connections, finish in-flight
+    // requests, then close the DB. Hard-kill after 30s to avoid hanging
+    // deployments.
+    const shutdown = async (signal: string) => {
+      console.log(`\n${signal} received — shutting down gracefully...`);
+
+      const forceExit = setTimeout(() => {
+        console.error('Forced exit after 30s timeout');
+        process.exit(1);
+      }, 30_000);
+      forceExit.unref();
+
+      server.close(async (err) => {
+        if (err) {
+          console.error('Error closing HTTP server:', err);
+        }
+        try {
+          await closeDatabaseConnection();
+        } catch (closeErr) {
+          console.error('Error closing DB connection:', closeErr);
+        }
+        clearTimeout(forceExit);
+        console.log('Shutdown complete.');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   })
   .catch((error) => {
     console.error('Failed to start server:', error);

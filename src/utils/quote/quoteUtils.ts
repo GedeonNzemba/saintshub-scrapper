@@ -1,5 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
+import { getCached, TTL } from '../cache';
 
 // Base URL for quote of the day with language placeholder
 const QUOTE_OF_THE_DAY_BASE_URL = 'https://branham.org/{lang}/quoteoftheday';
@@ -11,6 +13,20 @@ const AXIOS_TIMEOUT = 10000; // 10 seconds, consistent with bibleUtils
 const USER_AGENT_HEADER = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 };
+
+const quoteClient = axios.create({ timeout: AXIOS_TIMEOUT });
+axiosRetry(quoteClient, {
+    retries: 2,
+    retryDelay: axiosRetry.exponentialDelay,
+    retryCondition: (error: AxiosError) => {
+        if (axiosRetry.isNetworkError(error)) return true;
+        const status = error.response?.status;
+        if (status === 429) return true;
+        if (status && status >= 500 && status < 600) return true;
+        return false;
+    },
+    shouldResetTimeout: true,
+});
 
 export interface DailyVerse {
     reference: string | null;
@@ -58,14 +74,23 @@ function extractUrlFromPlayAudio(jsCall: string | undefined): string | null {
     return match && match[2] ? match[2] : null;
 }
 
+// Cached for 6h — quote of the day rolls over once daily. 6h means worst
+// case a user briefly sees yesterday's quote if they hit at midnight, but
+// massively reduces load on branham.org.
 export async function fetchDailyQuoteAndVerseData(language: Language = 'en'): Promise<FullQuotePageData> {
+    return getCached(
+        `quote:daily:${language}`,
+        TTL.DAILY,
+        () => fetchDailyQuoteAndVerseDataFromUpstream(language)
+    );
+}
+
+async function fetchDailyQuoteAndVerseDataFromUpstream(language: Language = 'en'): Promise<FullQuotePageData> {
     try {
-        // Construct the URL with the selected language
         const url = QUOTE_OF_THE_DAY_BASE_URL.replace('{lang}', language);
         console.log(`Fetching daily content from: ${url}`);
-        const response = await axios.get(url, {
+        const response = await quoteClient.get(url, {
             headers: USER_AGENT_HEADER,
-            timeout: AXIOS_TIMEOUT
         });
         const html = response.data;
         const $ = cheerio.load(html);
