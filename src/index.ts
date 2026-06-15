@@ -64,7 +64,7 @@ import {
   getCollections,
   getCollectionById
 } from './utils/database/resourceHandlers';const app = express();
-const port = process.env.PORT || 5000;
+const port = parseInt(process.env.PORT || '5000', 10);
 
 // ─── Security & body parsing ──────────────────────────────────────
 // Trust proxy headers (Railway, Vercel, Cloudflare) so rate limiter sees real client IP
@@ -1104,8 +1104,8 @@ connectToDatabase()
     ]);
     console.log('✅ Database indexes initialized');
 
-    const server = app.listen(port, () => {
-      console.log(`Server listening on http://localhost:${port}`);
+    const server = app.listen(port, '0.0.0.0', () => {
+      console.log(`Server listening on http://0.0.0.0:${port}`);
     });
 
     // Graceful shutdown: stop accepting new connections, finish in-flight
