@@ -13,21 +13,7 @@ export async function getBrowser(): Promise<Browser> {
     return browserInstance;
   }
 
-  let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-
-  // If no explicit path, try to find system chromium (for Nixpacks/Railway)
-  if (!executablePath) {
-    try {
-      executablePath = execSync('which chromium').toString().trim();
-    } catch (e) {
-      // 'which chromium' failed, fallback to bundled or other common paths
-      try {
-        executablePath = execSync('which chromium-browser').toString().trim();
-      } catch (e2) {
-        // Fallback to undefined to use bundled Chromium
-      }
-    }
-  }
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
   console.log(`[Puppeteer] Launching browser... (Executable: ${executablePath || 'bundled'})`);
   browserInstance = await puppeteer.launch({
