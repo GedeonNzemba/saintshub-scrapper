@@ -1,24 +1,6 @@
-import axios, { AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
+import { fetchHtmlWithPuppeteer } from '../puppeteerHelper';
 import * as cheerio from 'cheerio';
 import { getCached, TTL } from '../cache';
-
-const AXIOS_TIMEOUT = 10000;
-
-// Shared axios client for bible.com verse text fetches. Retry on transient failure.
-const bibleClient = axios.create({ timeout: AXIOS_TIMEOUT });
-axiosRetry(bibleClient, {
-    retries: 2,
-    retryDelay: axiosRetry.exponentialDelay,
-    retryCondition: (error: AxiosError) => {
-        if (axiosRetry.isNetworkError(error)) return true;
-        const status = error.response?.status;
-        if (status === 429) return true;
-        if (status && status >= 500 && status < 600) return true;
-        return false;
-    },
-    shouldResetTimeout: true,
-});
 
 const USER_AGENT_HEADER = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -283,56 +265,44 @@ async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Prom
     try {
         const parsed = parseUsfm(usfm);
         const chapterUsfm = `${parsed.book}.${parsed.chapter}`;
-        const apiUrl = `https://www.bible.com/bible/${versionId}/${chapterUsfm}.json`;
+        const apiUrl = `https://www.bible.com/bible/${versionId}/${chapterUsfm}`; // Using the main reader URL
 
-        const response = await bibleClient.get(apiUrl, {
-            headers: USER_AGENT_HEADER,
-        });
-
-        const html = response.data;
+        console.log(`[Verse Scrape] Fetching via Puppeteer: ${apiUrl}`);
+        const html = await fetchHtmlWithPuppeteer(apiUrl);
         const $ = cheerio.load(html);
 
-        // Find the __NEXT_DATA__ script tag
-        const nextDataScript = $('#__NEXT_DATA__').html();
-        if (!nextDataScript) {
-            console.error('__NEXT_DATA__ not found for verse fetch');
-            return null;
-        }
-
-        const jsonData = JSON.parse(nextDataScript);
-        const contentHtml = jsonData?.props?.pageProps?.chapterInfo?.content;
-        
-        if (!contentHtml) {
-            return null;
-        }
-
-        // Parse the chapter HTML to find the specific verse
-        const $content = cheerio.load(contentHtml);
-        
-        // Look for the verse by data-usfm attribute or verse number
+        // Bible.com's reader has verses in elements with data-usfm attribute
         let verseText = '';
         
-        // Try to find verse by looking for verse markers
-        $content('[data-usfm]').each((_, el) => {
-            const dataUsfm = $content(el).attr('data-usfm');
+        // Try to find verse by looking for verse markers in the rendered HTML
+        $('[data-usfm]').each((_, el) => {
+            const dataUsfm = $(el).attr('data-usfm');
+            // The data-usfm in the HTML often looks like GEN.1.1
             if (dataUsfm && dataUsfm.includes(usfm)) {
-                verseText = $content(el).text().trim();
+                // Find the content inside the verse span
+                // Usually there is a span with the verse text
+                const text = $(el).find('.content, [class*="content"]').text().trim() || $(el).text().trim();
+                verseText += (verseText ? ' ' : '') + text;
             }
         });
 
         // Alternative: Look for verse spans with class containing 'verse'
         if (!verseText) {
-            $content('[class*="verse"]').each((_, el) => {
-                const verseContent = $content(el);
-                const label = verseContent.find('[class*="label"]').text().trim();
+            $('[class*="verse"]').each((_, el) => {
+                const verseContent = $(el);
+                const label = verseContent.find('.label, [class*="label"]').text().trim();
                 if (label === String(parsed.verse)) {
-                    verseText = verseContent.find('[class*="content"]').text().trim();
+                    const text = verseContent.find('.content, [class*="content"]').text().trim();
+                    verseText += (verseText ? ' ' : '') + text;
                 }
             });
         }
+        
+        // If we still didn't find it, we might be hitting a dynamic loading state
+        // or a different HTML structure, but Puppeteer gives us the best chance.
 
         // Strip any leading verse numbers from the text
-        return verseText ? stripLeadingVerseNumber(verseText) : null;
+        return verseText ? stripLeadingVerseNumber(verseText.trim()) : null;
     } catch (error) {
         console.error('Error fetching verse text:', error instanceof Error ? error.message : error);
         return null;

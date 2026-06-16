@@ -67,7 +67,6 @@ export const configurationApiUrl = 'https://www.bible.com/api/bible/configuratio
 // Observed demo URL for content (response.json in demo folder) likely points to a URL like:
 // https://www.bible.com/_next/data/BUILD_ID/en/bible/VERSION_ID/USFM.json
 // Example for KJV (ID 1), Genesis 1 (GEN.1):
-// https://www.bible.com/bible/1/GEN.1.json (This fetches content directly, simpler)
-export const readableApiUrl = 'https://www.bible.com/bible/<version_id>/<chapter_usfm_plus_version_abbreviation>.json';
+export const readableApiUrl = 'https://www.bible.com/bible/<version_id>/<chapter_usfm_plus_version_abbreviation>';
 
 // NOTES FOR CHAPTER CONTENT FETCHING:

@@ -3,6 +3,7 @@ import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
 import { configurationApiUrl, versionsApiUrl, chapterApiUrl, readableApiUrl } from './utils/api';
 import { getCached, TTL } from '../cache';
+import { fetchHtmlWithPuppeteer } from '../puppeteerHelper';
 
 const AXIOS_TIMEOUT = 10000; // 10 seconds
 
@@ -290,45 +291,35 @@ async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm
         .replace('<version_id>', String(versionId))
         .replace('<chapter_usfm_plus_version_abbreviation>', chapterUsfm);
 
-    console.log(`Fetching chapter content for version ID '${versionId}', USFM '${chapterUsfm}' from: ${apiUrl}`);
+    console.log(`[Chapter Scrape] Fetching via Puppeteer for version ID '${versionId}', USFM '${chapterUsfm}' from: ${apiUrl}`);
 
     try {
-        const response = await bibleClient.get<string>(apiUrl, {
-            headers: USER_AGENT_HEADER,
-        });
+        const html = await fetchHtmlWithPuppeteer(apiUrl);
+        const $ = cheerio.load(html);
 
-        // Log the raw HTML response to help with debugging if needed
-        // console.log('Raw chapter API HTML response data:', response.data);
-
-        // Load the HTML into cheerio
-        const $ = cheerio.load(response.data);
-
-        // Find the script tag with id __NEXT_DATA__
-        const nextDataScript = $('#__NEXT_DATA__').html();
-
-        if (!nextDataScript) {
-            console.error('__NEXT_DATA__ script tag not found in the HTML response.');
-            throw new Error('Failed to find __NEXT_DATA__ script tag.');
+        // Bible.com's reader has the chapter content in elements with classes like .chapter or .ChapterContent_chapter
+        // We will try to extract the main content container
+        let contentHtml = '';
+        
+        const contentContainer = $('[class*="chapter"], [class*="ChapterContent_chapter"]').first().parent();
+        
+        if (contentContainer.length > 0) {
+             contentHtml = contentContainer.html() || '';
+        } else {
+             // Fallback: extract the whole reader area
+             const readerArea = $('[class*="reader"], [class*="Reader_"]').first();
+             if (readerArea.length > 0) {
+                 contentHtml = readerArea.html() || '';
+             } else {
+                 // Final fallback: the body
+                 contentHtml = $('body').html() || '';
+             }
         }
 
-        // Parse the JSON content from the script tag
-        let jsonData;
-        try {
-            jsonData = JSON.parse(nextDataScript);
-        } catch (parseError) {
-            console.error('Failed to parse JSON from __NEXT_DATA__ script tag:', parseError);
-            throw new Error('Failed to parse chapter JSON data.');
+        if (!contentHtml) {
+            console.error('Failed to extract chapter content HTML from Puppeteer response.');
+            throw new Error('Failed to parse chapter content from HTML.');
         }
-
-        // Log the parsed JSON structure
-        // console.log('Parsed JSON props from __NEXT_DATA__:', JSON.stringify(jsonData?.props, null, 2));
-
-        const chapterInfo = jsonData?.props?.pageProps?.chapterInfo;
-        if (!chapterInfo || typeof chapterInfo.content !== 'string') {
-            console.error('Invalid chapter data structure or content HTML not found in parsed JSON. Received:', jsonData);
-            throw new Error('Failed to parse chapter content from JSON.');
-        }
-        let contentHtml: string = chapterInfo.content;
 
         // Transform class names
         const transformedHtml = contentHtml.replace(/class="([^"]*)"/g, (match, classString: string) => {
@@ -339,18 +330,36 @@ async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm
             return `class="${newClasses}"`;
         });
 
-        // Extract previous and next chapter information if available
-        const prevChapInfo = jsonData?.props?.pageProps?.chapterInfo?.previous;
-        const nextChapInfo = jsonData?.props?.pageProps?.chapterInfo?.next;
+        // Extract heading (e.g. "Genesis 1")
+        const heading = $('h1, [class*="heading"], [class*="title"]').first().text().trim() || chapterUsfm;
 
-        //console.log(`Successfully fetched and processed chapter content for ${chapterUsfm}.`);
+        // Note: Previous and Next chapter information might be tricky to extract without the JSON.
+        // For now, we will leave them null, or try to parse the pagination links if needed.
+        // Bible.com typically has previous/next buttons in the nav.
+        let previousChapterUsfm: any = null;
+        let nextChapterUsfm: any = null;
+        
+        $('a[href*="/bible/"]').each((_, el) => {
+            const href = $(el).attr('href');
+            const text = $(el).text().toLowerCase();
+            if (href && (text.includes('previous') || text.includes('«') || $(el).attr('aria-label')?.toLowerCase().includes('previous'))) {
+                const parts = href.split('/');
+                const usfm = parts[parts.length - 1].replace('.json', '');
+                previousChapterUsfm = { usfm, name: 'Previous Chapter' };
+            }
+            if (href && (text.includes('next') || text.includes('»') || $(el).attr('aria-label')?.toLowerCase().includes('next'))) {
+                const parts = href.split('/');
+                const usfm = parts[parts.length - 1].replace('.json', '');
+                nextChapterUsfm = { usfm, name: 'Next Chapter' };
+            }
+        });
 
         return {
             html: transformedHtml,
-            jsonResponse: jsonData,
-            heading: jsonData?.props?.pageProps?.chapterInfo?.reference?.human,
-            previousChapterUsfm: prevChapInfo ? { usfm: prevChapInfo.usfm, name: prevChapInfo.reference?.human } : null,
-            nextChapterUsfm: nextChapInfo ? { usfm: nextChapInfo.usfm, name: nextChapInfo.reference?.human } : null
+            jsonResponse: {}, // No JSON response available anymore
+            heading: heading,
+            previousChapterUsfm,
+            nextChapterUsfm
         };
 
     } catch (error) {
