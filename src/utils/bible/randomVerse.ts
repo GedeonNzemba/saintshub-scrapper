@@ -1,10 +1,29 @@
-import { fetchHtmlWithPuppeteer } from '../puppeteerHelper';
+import axios, { AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
 import { getCached, TTL } from '../cache';
 
 const USER_AGENT_HEADER = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 };
+
+// YouVersion content API backend — no Cloudflare challenge, plain HTTP.
+const bibleClient = axios.create({ timeout: 10000 });
+axiosRetry(bibleClient, {
+    retries: 2,
+    retryDelay: axiosRetry.exponentialDelay,
+    retryCondition: (error: AxiosError) => {
+        if (axiosRetry.isNetworkError(error)) return true;
+        const status = error.response?.status;
+        if (status === 429) return true;
+        if (status && status >= 500 && status < 600) return true;
+        return false;
+    },
+    shouldResetTimeout: true,
+});
+
+const CHAPTER_API_URL = (versionId: number, reference: string) =>
+    `https://nodejs.bible.com/api/bible/chapter/3.1?id=${versionId}&reference=${encodeURIComponent(reference)}`;
 
 export interface RandomVerse {
     reference: string;
@@ -265,24 +284,12 @@ async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Prom
     try {
         const parsed = parseUsfm(usfm);
         const chapterUsfm = `${parsed.book}.${parsed.chapter}`;
-        const apiUrl = `https://www.bible.com/bible/${versionId}/${chapterUsfm}`; // Using the main reader URL
+        const apiUrl = CHAPTER_API_URL(versionId, chapterUsfm);
 
-        console.log(`[Verse Scrape] Fetching via Puppeteer: ${apiUrl}`);
-        const html = await fetchHtmlWithPuppeteer(apiUrl);
-        const $ = cheerio.load(html);
-
-        // Pull the chapter content out of Next.js's __NEXT_DATA__ blob (reliable),
-        // then locate the specific verse within it.
-        const nextDataScript = $('#__NEXT_DATA__').html();
-        if (!nextDataScript) {
-            console.error('[Verse Scrape] __NEXT_DATA__ not found');
-            return null;
-        }
-
-        const jsonData = JSON.parse(nextDataScript);
-        const contentHtml: string | undefined = jsonData?.props?.pageProps?.chapterInfo?.content;
+        const response = await bibleClient.get(apiUrl, { headers: USER_AGENT_HEADER });
+        const contentHtml: string | undefined = response.data?.content;
         if (!contentHtml) {
-            console.error('[Verse Scrape] chapterInfo.content not found');
+            console.error('[Verse] chapter content not found for', usfm);
             return null;
         }
 

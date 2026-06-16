@@ -24,7 +24,6 @@
     "lru-cache": "^11.5.1",
     "mongodb": "^7.0.0",
     "pdf-parse": "^1.1.1",
-    "puppeteer": "^21.3.8",
     "tough-cookie": "^5.1.2",
     "uuid": "^11.1.0"
   },

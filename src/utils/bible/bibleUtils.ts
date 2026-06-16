@@ -1,9 +1,15 @@
 import axios, { AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import * as cheerio from 'cheerio';
-import { configurationApiUrl, versionsApiUrl, chapterApiUrl, readableApiUrl } from './utils/api';
+import { configurationApiUrl, versionsApiUrl, chapterApiUrl } from './utils/api';
 import { getCached, TTL } from '../cache';
-import { fetchHtmlWithPuppeteer } from '../puppeteerHelper';
+
+// YouVersion's content API backend. Unlike www.bible.com's reader pages, this
+// host is NOT behind the Cloudflare/Fastly JS challenge, so we can fetch
+// chapter content with plain HTTP (no headless browser). Same data, same
+// versionIds/USFM, same HTML structure the app already renders.
+const CHAPTER_API_URL = (versionId: string | number, reference: string) =>
+  `https://nodejs.bible.com/api/bible/chapter/3.1?id=${encodeURIComponent(String(versionId))}&reference=${encodeURIComponent(reference)}`;
 
 const AXIOS_TIMEOUT = 10000; // 10 seconds
 
@@ -286,35 +292,27 @@ export async function fetchAndProcessChapter(versionId: string, chapterUsfm: str
     );
 }
 
-async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm: string): Promise<ChapterContentResponse> {
-    const apiUrl = readableApiUrl
-        .replace('<version_id>', String(versionId))
-        .replace('<chapter_usfm_plus_version_abbreviation>', chapterUsfm);
+// Extract the first USFM string from a prev/next descriptor, which may store
+// usfm as an array (["MAT.4"]) or a plain string.
+function firstUsfm(node: any): string | undefined {
+    if (!node) return undefined;
+    return Array.isArray(node.usfm) ? node.usfm[0] : node.usfm;
+}
 
-    console.log(`[Chapter Scrape] Fetching via Puppeteer for version ID '${versionId}', USFM '${chapterUsfm}' from: ${apiUrl}`);
+async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm: string): Promise<ChapterContentResponse> {
+    const apiUrl = CHAPTER_API_URL(versionId, chapterUsfm);
+    console.log(`[Chapter] Fetching ${chapterUsfm} (v${versionId}) from nodejs.bible.com`);
 
     try {
-        const html = await fetchHtmlWithPuppeteer(apiUrl);
-        const $ = cheerio.load(html);
+        const response = await bibleClient.get(apiUrl, { headers: USER_AGENT_HEADER });
+        const data = response.data;
 
-        // bible.com is a Next.js app — the full chapter content lives in the
-        // __NEXT_DATA__ script as props.pageProps.chapterInfo.content. This is
-        // the SAME structure the app rendered before Cloudflare appeared, so we
-        // parse it instead of scraping the visual DOM (which loses verse text).
-        const nextDataScript = $('#__NEXT_DATA__').html();
-        if (!nextDataScript) {
-            throw new Error('__NEXT_DATA__ script not found — bible.com layout may have changed or the challenge did not clear.');
+        const contentHtml: unknown = data?.content;
+        if (typeof contentHtml !== 'string' || !contentHtml) {
+            throw new Error('chapter content missing from nodejs.bible.com response');
         }
 
-        const jsonData = JSON.parse(nextDataScript);
-        const chapterInfo = jsonData?.props?.pageProps?.chapterInfo;
-        if (!chapterInfo || typeof chapterInfo.content !== 'string') {
-            throw new Error('chapterInfo.content not found in __NEXT_DATA__.');
-        }
-
-        const contentHtml: string = chapterInfo.content;
-
-        // Transform Bible.com's hashed class names to the stable ones the app expects.
+        // Transform Bible.com's class names to the stable ones the app expects.
         const transformedHtml = contentHtml.replace(/class="([^"]*)"/g, (_match, classString: string) => {
             const newClasses = classString
                 .split(' ')
@@ -323,19 +321,19 @@ async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm
             return `class="${newClasses}"`;
         });
 
-        const prevChapInfo = chapterInfo.previous;
-        const nextChapInfo = chapterInfo.next;
+        const prevUsfm = firstUsfm(data?.previous);
+        const nextUsfm = firstUsfm(data?.next);
 
         return {
             html: transformedHtml,
-            jsonResponse: jsonData,
-            heading: chapterInfo.reference?.human,
-            previousChapterUsfm: prevChapInfo ? { usfm: prevChapInfo.usfm, name: prevChapInfo.reference?.human } : null,
-            nextChapterUsfm: nextChapInfo ? { usfm: nextChapInfo.usfm, name: nextChapInfo.reference?.human } : null
+            jsonResponse: data,
+            heading: data?.reference?.human,
+            previousChapterUsfm: prevUsfm ? { usfm: prevUsfm, name: data.previous.human } : null,
+            nextChapterUsfm: nextUsfm ? { usfm: nextUsfm, name: data.next.human } : null
         };
 
     } catch (error) {
-        console.error(`Error fetching/processing chapter ${chapterUsfm} for version ID '${versionId}':`, error instanceof Error ? error.message : error);
+        console.error(`Error fetching chapter ${chapterUsfm} for version ID '${versionId}':`, error instanceof Error ? error.message : error);
         if (axios.isAxiosError(error)) {
             console.error('Axios error details:', error.response?.status, error.response?.data);
         }
