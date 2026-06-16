@@ -1,11 +1,15 @@
 # Railway / Nixpacks build config.
 #
 # We install a SYSTEM Chromium (plus the fonts/libs it needs) via Nix.
-# Puppeteer is told to use it at runtime by puppeteerHelper.ts, which does
-# `which chromium` — the Nix-installed binary is on PATH at runtime.
+# Puppeteer is told to use it at runtime by puppeteerHelper.ts, which finds
+# the binary in the Nix store at runtime.
 #
 # We do NOT rely on Puppeteer's bundled Chromium download here, because that
 # download does not reliably persist between Railway's build and run phases.
+#
+# NOTE: these must be valid nixpkgs attribute names (NOT apt/Debian names).
+#   cacert         = CA certificates (apt calls it ca-certificates)
+#   liberation_ttf = Liberation fonts (apt calls it ttf-liberation)
 
 [phases.setup]
 nixPkgs = [
@@ -14,8 +18,8 @@ nixPkgs = [
   "nss",
   "freetype",
   "harfbuzz",
-  "ca-certificates",
-  "ttf-liberation"
+  "cacert",
+  "liberation_ttf"
 ]
 
 [variables]

@@ -52,6 +52,7 @@ function resolveExecutablePath(): string | undefined {
     return resolvedExecutablePath;
   }
 
+  // 2a. Try `which` for a Chromium on PATH (works if PATH includes it).
   const candidates = ['chromium', 'chromium-browser', 'google-chrome-stable', 'google-chrome'];
   for (const bin of candidates) {
     try {
@@ -60,7 +61,7 @@ function resolveExecutablePath(): string | undefined {
         .trim();
       if (found) {
         resolvedExecutablePath = found;
-        console.log(`[Puppeteer] Resolved system Chromium: ${found}`);
+        console.log(`[Puppeteer] Resolved Chromium via which: ${found}`);
         return found;
       }
     } catch {
@@ -68,7 +69,27 @@ function resolveExecutablePath(): string | undefined {
     }
   }
 
-  console.log('[Puppeteer] No system Chromium found on PATH; falling back to bundled Chromium.');
+  // 2b. Search the Nix store directly. On Railway/Nixpacks the Chromium
+  // installed via nixPkgs lives at /nix/store/<hash>-chromium-<ver>/bin/chromium
+  // but isn't always added to PATH at runtime. Prefer the wrapped binary
+  // (exclude "unwrapped", which lacks the library/sandbox setup).
+  try {
+    const found = execSync(
+      "ls -d /nix/store/*-chromium-*/bin/chromium 2>/dev/null | grep -v unwrapped | head -n1",
+      { shell: '/bin/sh', stdio: ['ignore', 'pipe', 'ignore'] }
+    )
+      .toString()
+      .trim();
+    if (found) {
+      resolvedExecutablePath = found;
+      console.log(`[Puppeteer] Resolved Chromium from Nix store: ${found}`);
+      return found;
+    }
+  } catch {
+    // nothing in the Nix store — fall through
+  }
+
+  console.log('[Puppeteer] No system Chromium found (PATH or Nix store); falling back to bundled Chromium.');
   resolvedExecutablePath = null;
   return undefined;
 }
