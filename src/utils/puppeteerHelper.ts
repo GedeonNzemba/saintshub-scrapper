@@ -15,6 +15,12 @@ let launchPromise: Promise<Browser> | null = null;
 // a restart loop. Requests that need a browser await this before launching.
 let chromeInstallPromise: Promise<void> | null = null;
 
+// Absolute path to the Chrome binary that the install command reported.
+// We pass this explicitly to puppeteer.launch() because puppeteer's own
+// auto-resolution computes its path at import time — before the runtime
+// install has happened — and then fails to find the freshly installed binary.
+let installedChromePath: string | null = null;
+
 export function ensureChromeInstalled(): Promise<void> {
   if (chromeInstallPromise) return chromeInstallPromise;
 
@@ -25,7 +31,14 @@ export function ensureChromeInstalled(): Promise<void> {
         timeout: 180_000,
         maxBuffer: 10 * 1024 * 1024,
       });
-      console.log('[Puppeteer] Chrome ready:', stdout.trim().split('\n').pop());
+      // Output looks like: "chrome@121.0.6167.85 /app/.cache/puppeteer/chrome/linux-.../chrome"
+      const match = stdout.match(/chrome@[\d.]+\s+(\/\S+)/);
+      if (match) {
+        installedChromePath = match[1].trim();
+        console.log('[Puppeteer] Chrome ready at:', installedChromePath);
+      } else {
+        console.warn('[Puppeteer] Chrome installed but could not parse path from output:', stdout.trim());
+      }
     } catch (err) {
       console.error('[Puppeteer] Chrome install failed:', err instanceof Error ? err.message : err);
       // Reset so a later request can retry the install.
@@ -148,7 +161,9 @@ export async function getBrowser(): Promise<Browser> {
   // for it instead of failing with "Could not find Chrome".
   await ensureChromeInstalled();
 
-  const executablePath = resolveExecutablePath();
+  // Prefer the exact path the install reported. Fall back to env/PATH/Nix
+  // detection, then puppeteer's bundled resolution as a last resort.
+  const executablePath = installedChromePath || resolveExecutablePath();
   console.log(`[Puppeteer] Launching browser... (Executable: ${executablePath || 'bundled'})`);
 
   launchPromise = puppeteer
