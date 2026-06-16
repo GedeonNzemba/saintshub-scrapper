@@ -1,10 +1,11 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
+import { execSync } from 'child_process';
 
 let browserInstance: Browser | null = null;
 
 /**
  * Initializes and returns a singleton Puppeteer browser instance.
- * It uses the system Chromium if PUPPETEER_EXECUTABLE_PATH is set (e.g. on Railway via Nixpacks),
+ * It uses the system Chromium if available on PATH (e.g., via Nixpacks on Railway),
  * otherwise it falls back to the bundled Chromium.
  */
 export async function getBrowser(): Promise<Browser> {
@@ -12,7 +13,21 @@ export async function getBrowser(): Promise<Browser> {
     return browserInstance;
   }
 
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+  let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+
+  // If no explicit path, try to find system chromium (for Nixpacks/Railway)
+  if (!executablePath) {
+    try {
+      executablePath = execSync('which chromium').toString().trim();
+    } catch (e) {
+      // 'which chromium' failed, fallback to bundled or other common paths
+      try {
+        executablePath = execSync('which chromium-browser').toString().trim();
+      } catch (e2) {
+        // Fallback to undefined to use bundled Chromium
+      }
+    }
+  }
 
   console.log(`[Puppeteer] Launching browser... (Executable: ${executablePath || 'bundled'})`);
   browserInstance = await puppeteer.launch({
