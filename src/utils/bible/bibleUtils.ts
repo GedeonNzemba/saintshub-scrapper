@@ -297,69 +297,41 @@ async function fetchAndProcessChapterFromUpstream(versionId: string, chapterUsfm
         const html = await fetchHtmlWithPuppeteer(apiUrl);
         const $ = cheerio.load(html);
 
-        // Bible.com's reader has the chapter content in elements with classes like .chapter or .ChapterContent_chapter
-        // We will try to extract the main content container
-        let contentHtml = '';
-        
-        const contentContainer = $('[class*="chapter"], [class*="ChapterContent_chapter"]').first().parent();
-        
-        if (contentContainer.length > 0) {
-             contentHtml = contentContainer.html() || '';
-        } else {
-             // Fallback: extract the whole reader area
-             const readerArea = $('[class*="reader"], [class*="Reader_"]').first();
-             if (readerArea.length > 0) {
-                 contentHtml = readerArea.html() || '';
-             } else {
-                 // Final fallback: the body
-                 contentHtml = $('body').html() || '';
-             }
+        // bible.com is a Next.js app — the full chapter content lives in the
+        // __NEXT_DATA__ script as props.pageProps.chapterInfo.content. This is
+        // the SAME structure the app rendered before Cloudflare appeared, so we
+        // parse it instead of scraping the visual DOM (which loses verse text).
+        const nextDataScript = $('#__NEXT_DATA__').html();
+        if (!nextDataScript) {
+            throw new Error('__NEXT_DATA__ script not found — bible.com layout may have changed or the challenge did not clear.');
         }
 
-        if (!contentHtml) {
-            console.error('Failed to extract chapter content HTML from Puppeteer response.');
-            throw new Error('Failed to parse chapter content from HTML.');
+        const jsonData = JSON.parse(nextDataScript);
+        const chapterInfo = jsonData?.props?.pageProps?.chapterInfo;
+        if (!chapterInfo || typeof chapterInfo.content !== 'string') {
+            throw new Error('chapterInfo.content not found in __NEXT_DATA__.');
         }
 
-        // Transform class names
-        const transformedHtml = contentHtml.replace(/class="([^"]*)"/g, (match, classString: string) => {
-            const originalClasses = classString.split(' ');
-            const newClasses = originalClasses
+        const contentHtml: string = chapterInfo.content;
+
+        // Transform Bible.com's hashed class names to the stable ones the app expects.
+        const transformedHtml = contentHtml.replace(/class="([^"]*)"/g, (_match, classString: string) => {
+            const newClasses = classString
+                .split(' ')
                 .map(originalClass => bibleContentClassMap[originalClass] || originalClass)
                 .join(' ');
             return `class="${newClasses}"`;
         });
 
-        // Extract heading (e.g. "Genesis 1")
-        const heading = $('h1, [class*="heading"], [class*="title"]').first().text().trim() || chapterUsfm;
-
-        // Note: Previous and Next chapter information might be tricky to extract without the JSON.
-        // For now, we will leave them null, or try to parse the pagination links if needed.
-        // Bible.com typically has previous/next buttons in the nav.
-        let previousChapterUsfm: any = null;
-        let nextChapterUsfm: any = null;
-        
-        $('a[href*="/bible/"]').each((_, el) => {
-            const href = $(el).attr('href');
-            const text = $(el).text().toLowerCase();
-            if (href && (text.includes('previous') || text.includes('«') || $(el).attr('aria-label')?.toLowerCase().includes('previous'))) {
-                const parts = href.split('/');
-                const usfm = parts[parts.length - 1].replace('.json', '');
-                previousChapterUsfm = { usfm, name: 'Previous Chapter' };
-            }
-            if (href && (text.includes('next') || text.includes('»') || $(el).attr('aria-label')?.toLowerCase().includes('next'))) {
-                const parts = href.split('/');
-                const usfm = parts[parts.length - 1].replace('.json', '');
-                nextChapterUsfm = { usfm, name: 'Next Chapter' };
-            }
-        });
+        const prevChapInfo = chapterInfo.previous;
+        const nextChapInfo = chapterInfo.next;
 
         return {
             html: transformedHtml,
-            jsonResponse: {}, // No JSON response available anymore
-            heading: heading,
-            previousChapterUsfm,
-            nextChapterUsfm
+            jsonResponse: jsonData,
+            heading: chapterInfo.reference?.human,
+            previousChapterUsfm: prevChapInfo ? { usfm: prevChapInfo.usfm, name: prevChapInfo.reference?.human } : null,
+            nextChapterUsfm: nextChapInfo ? { usfm: nextChapInfo.usfm, name: nextChapInfo.reference?.human } : null
         };
 
     } catch (error) {

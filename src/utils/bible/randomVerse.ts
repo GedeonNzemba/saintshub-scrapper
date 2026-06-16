@@ -271,37 +271,45 @@ async function fetchVerseTextFromUpstream(versionId: number, usfm: string): Prom
         const html = await fetchHtmlWithPuppeteer(apiUrl);
         const $ = cheerio.load(html);
 
-        // Bible.com's reader has verses in elements with data-usfm attribute
+        // Pull the chapter content out of Next.js's __NEXT_DATA__ blob (reliable),
+        // then locate the specific verse within it.
+        const nextDataScript = $('#__NEXT_DATA__').html();
+        if (!nextDataScript) {
+            console.error('[Verse Scrape] __NEXT_DATA__ not found');
+            return null;
+        }
+
+        const jsonData = JSON.parse(nextDataScript);
+        const contentHtml: string | undefined = jsonData?.props?.pageProps?.chapterInfo?.content;
+        if (!contentHtml) {
+            console.error('[Verse Scrape] chapterInfo.content not found');
+            return null;
+        }
+
+        const $content = cheerio.load(contentHtml);
         let verseText = '';
-        
-        // Try to find verse by looking for verse markers in the rendered HTML
-        $('[data-usfm]').each((_, el) => {
-            const dataUsfm = $(el).attr('data-usfm');
-            // The data-usfm in the HTML often looks like GEN.1.1
-            if (dataUsfm && dataUsfm.includes(usfm)) {
-                // Find the content inside the verse span
-                // Usually there is a span with the verse text
-                const text = $(el).find('.content, [class*="content"]').text().trim() || $(el).text().trim();
+
+        // Verses are marked with data-usfm="BOOK.CHAP.VERSE" on Bible.com.
+        $content(`[data-usfm]`).each((_, el) => {
+            const dataUsfm = $content(el).attr('data-usfm');
+            if (dataUsfm && dataUsfm === usfm) {
+                const text = $content(el).find('[class*="content"]').text().trim() || $content(el).text().trim();
                 verseText += (verseText ? ' ' : '') + text;
             }
         });
 
-        // Alternative: Look for verse spans with class containing 'verse'
+        // Fallback: match by verse label number within verse spans.
         if (!verseText) {
-            $('[class*="verse"]').each((_, el) => {
-                const verseContent = $(el);
-                const label = verseContent.find('.label, [class*="label"]').text().trim();
+            $content('[class*="verse"]').each((_, el) => {
+                const verseContent = $content(el);
+                const label = verseContent.find('[class*="label"]').text().trim();
                 if (label === String(parsed.verse)) {
-                    const text = verseContent.find('.content, [class*="content"]').text().trim();
+                    const text = verseContent.find('[class*="content"]').text().trim();
                     verseText += (verseText ? ' ' : '') + text;
                 }
             });
         }
-        
-        // If we still didn't find it, we might be hitting a dynamic loading state
-        // or a different HTML structure, but Puppeteer gives us the best chance.
 
-        // Strip any leading verse numbers from the text
         return verseText ? stripLeadingVerseNumber(verseText.trim()) : null;
     } catch (error) {
         console.error('Error fetching verse text:', error instanceof Error ? error.message : error);

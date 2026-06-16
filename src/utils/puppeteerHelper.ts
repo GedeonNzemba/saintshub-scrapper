@@ -214,14 +214,32 @@ export async function fetchHtmlWithPuppeteer(url: string): Promise<string> {
     );
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
 
+    // Block heavy resources we never read (images, fonts, media, stylesheets).
+    // Keep documents + scripts + xhr/fetch so the Cloudflare JS challenge still
+    // runs and the Next.js data loads. This roughly halves page-load time.
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const type = req.resourceType();
+      if (type === 'image' || type === 'media' || type === 'font' || type === 'stylesheet') {
+        req.abort().catch(() => {});
+      } else {
+        req.continue().catch(() => {});
+      }
+    });
+
     console.log(`[Puppeteer] Navigating to ${url}`);
 
-    // Wait until the network is quiet so the JS challenge has time to run.
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    // networkidle2 can fire mid-challenge during a redirect; give the
-    // challenge a brief grace period to finish before reading the DOM.
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for the Next.js data blob to appear — its presence means the JS
+    // challenge cleared and the real chapter content is in the DOM. Far faster
+    // than networkidle2 on this ad-heavy site.
+    try {
+      await page.waitForSelector('#__NEXT_DATA__', { timeout: 15000 });
+    } catch {
+      // Challenge may still be settling — short grace period, then read anyway.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
 
     return await page.content();
   } catch (error) {
