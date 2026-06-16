@@ -1,28 +1,41 @@
-# Railway / Nixpacks build config.
+# Railway / Nixpacks build config for Puppeteer.
 #
-# We install a SYSTEM Chromium (plus the fonts/libs it needs) via Nix.
-# Puppeteer is told to use it at runtime by puppeteerHelper.ts, which finds
-# the binary in the Nix store at runtime.
+# Railway's Nixpacks base image is Ubuntu-based, where:
+#   - the `chromium` apt package is a broken snap stub (doesn't run in containers)
+#   - the Nix `chromium` package doesn't reliably land on PATH at runtime
 #
-# We do NOT rely on Puppeteer's bundled Chromium download here, because that
-# download does not reliably persist between Railway's build and run phases.
-#
-# NOTE: these must be valid nixpkgs attribute names (NOT apt/Debian names).
-#   cacert         = CA certificates (apt calls it ca-certificates)
-#   liberation_ttf = Liberation fonts (apt calls it ttf-liberation)
+# The proven approach (see github.com/ryannono/Puppeteer-Railway-Buildpack):
+#   1. apt-install the shared LIBRARIES Chrome links against (Ubuntu lacks them)
+#   2. let Puppeteer download + use its OWN bundled Chromium
+#   3. pin the cache dir to /app/.cache/puppeteer so the download (build phase)
+#      persists into the runtime image, and runtime looks in the same place.
 
 [phases.setup]
-nixPkgs = [
-  "...",
-  "chromium",
-  "nss",
-  "freetype",
-  "harfbuzz",
-  "cacert",
-  "liberation_ttf"
+nixPkgs = ["..."]
+aptPkgs = [
+  "fonts-liberation",
+  "libappindicator3-1",
+  "libasound2",
+  "libatk-bridge2.0-0",
+  "libatk1.0-0",
+  "libgbm1",
+  "libgtk-3-0",
+  "libnspr4",
+  "libnss3",
+  "libx11-xcb1",
+  "libxcomposite1",
+  "libxcursor1",
+  "libxdamage1",
+  "libxfixes3",
+  "libxi6",
+  "libxrandr2",
+  "libxss1",
+  "libxtst6",
+  "xdg-utils"
 ]
 
 [variables]
-# Skip Puppeteer's own Chromium download during npm install on Railway —
-# we use the Nix system Chromium instead. (Local dev still downloads it.)
-PUPPETEER_SKIP_DOWNLOAD = "true"
+# Pin Puppeteer's browser cache to a path INSIDE /app so the Chromium
+# downloaded during the build (postinstall) persists into the runtime image.
+# Both the download and the runtime launch read this same variable.
+PUPPETEER_CACHE_DIR = "/app/.cache/puppeteer"
