@@ -1,3 +1,12 @@
+# Railway / Nixpacks build config.
+#
+# We install a SYSTEM Chromium (plus the fonts/libs it needs) via Nix.
+# Puppeteer is told to use it at runtime by puppeteerHelper.ts, which does
+# `which chromium` — the Nix-installed binary is on PATH at runtime.
+#
+# We do NOT rely on Puppeteer's bundled Chromium download here, because that
+# download does not reliably persist between Railway's build and run phases.
+
 [phases.setup]
 nixPkgs = [
   "...",
@@ -10,4 +19,6 @@ nixPkgs = [
 ]
 
 [variables]
-PUPPETEER_EXECUTABLE_PATH = ""
+# Skip Puppeteer's own Chromium download during npm install on Railway —
+# we use the Nix system Chromium instead. (Local dev still downloads it.)
+PUPPETEER_SKIP_DOWNLOAD = "true"

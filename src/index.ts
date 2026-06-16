@@ -47,6 +47,7 @@ import {
 import { connectToDatabase, closeDatabaseConnection, pingDatabase } from './utils/database/connection';
 import { initializeAnnotationIndexes } from './utils/annotationHandlers';
 import { initializeCacheIndexes, getCached, TTL } from './utils/cache';
+import { closeBrowser } from './utils/puppeteerHelper';
 import { 
   createResource, 
   getAllResources, 
@@ -1130,6 +1131,11 @@ connectToDatabase()
           await closeDatabaseConnection();
         } catch (closeErr) {
           console.error('Error closing DB connection:', closeErr);
+        }
+        try {
+          await closeBrowser();
+        } catch (closeErr) {
+          console.error('Error closing Puppeteer browser:', closeErr);
         }
         clearTimeout(forceExit);
         console.log('Shutdown complete.');
