@@ -1,8 +1,41 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 let browserInstance: Browser | null = null;
 let launchPromise: Promise<Browser> | null = null;
+
+// Memoised promise for the runtime Chrome install. On Railway the build-time
+// download lands in a cache-mount that's stripped from the runtime image, so
+// we install Chrome into the live container instead. This runs AFTER the
+// server is already listening (kicked off at startup), so it never blocks the
+// port from opening — otherwise Railway's health check would fail and trigger
+// a restart loop. Requests that need a browser await this before launching.
+let chromeInstallPromise: Promise<void> | null = null;
+
+export function ensureChromeInstalled(): Promise<void> {
+  if (chromeInstallPromise) return chromeInstallPromise;
+
+  chromeInstallPromise = (async () => {
+    try {
+      console.log('[Puppeteer] Ensuring Chrome is installed (runtime)...');
+      const { stdout } = await execAsync('npx puppeteer browsers install chrome', {
+        timeout: 180_000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      console.log('[Puppeteer] Chrome ready:', stdout.trim().split('\n').pop());
+    } catch (err) {
+      console.error('[Puppeteer] Chrome install failed:', err instanceof Error ? err.message : err);
+      // Reset so a later request can retry the install.
+      chromeInstallPromise = null;
+      throw err;
+    }
+  })();
+
+  return chromeInstallPromise;
+}
 
 // Resolved once and memoised. `undefined` = not resolved yet,
 // `null` = resolved to "use puppeteer's bundled Chromium".
@@ -109,6 +142,11 @@ export async function getBrowser(): Promise<Browser> {
   if (launchPromise) {
     return launchPromise;
   }
+
+  // Make sure Chrome is actually present before we try to launch. If the
+  // background install (started at server boot) is still running, this waits
+  // for it instead of failing with "Could not find Chrome".
+  await ensureChromeInstalled();
 
   const executablePath = resolveExecutablePath();
   console.log(`[Puppeteer] Launching browser... (Executable: ${executablePath || 'bundled'})`);

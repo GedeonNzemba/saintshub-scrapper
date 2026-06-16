@@ -47,7 +47,7 @@ import {
 import { connectToDatabase, closeDatabaseConnection, pingDatabase } from './utils/database/connection';
 import { initializeAnnotationIndexes } from './utils/annotationHandlers';
 import { initializeCacheIndexes, getCached, TTL } from './utils/cache';
-import { closeBrowser } from './utils/puppeteerHelper';
+import { closeBrowser, ensureChromeInstalled } from './utils/puppeteerHelper';
 import { 
   createResource, 
   getAllResources, 
@@ -1109,6 +1109,14 @@ connectToDatabase()
       console.log(`Server listening on http://0.0.0.0:${port}`);
       console.log(`[DEBUG] port variable = ${port}`);
       console.log(`[DEBUG] process.env.PORT = ${process.env.PORT}`);
+
+      // Pre-warm Chrome in the background AFTER the port is open. This must
+      // not block listen() — otherwise Railway's health check hits a dead
+      // port and restart-loops. Bible chapter/verse requests await this
+      // install (see getBrowser); everything else serves immediately.
+      ensureChromeInstalled().catch(() => {
+        // Already logged inside; a later request will retry the install.
+      });
     });
 
     // Graceful shutdown: stop accepting new connections, finish in-flight
