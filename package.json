@@ -6,6 +6,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "postinstall": "npx puppeteer browsers install chrome",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --watch src --ext ts,json --exec ts-node src/index.ts"
